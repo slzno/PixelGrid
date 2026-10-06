@@ -357,6 +357,11 @@ select {
   color: #ff8a95;
 }
 
+/* Device orientation toggle: phone on its side. */
+.pane-orient-icon {
+  transform: rotate(90deg);
+}
+
 .device-picker {
   position: relative;
   display: inline-flex;

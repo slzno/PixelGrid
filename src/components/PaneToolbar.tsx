@@ -1,10 +1,10 @@
 import { useEffect, useRef } from 'react'
 import {
-  ArrowLeftRight,
   Code2,
   Layers,
   Moon,
   RefreshCw,
+  Smartphone,
   X,
 } from 'lucide-react'
 import { DeviceSelect } from '@/components/DeviceSelect'
@@ -79,14 +79,19 @@ export function PaneToolbar({ pane, width }: PaneToolbarProps) {
         <button
           type="button"
           className="pane-icon-btn"
-          title="Rotar (intercambiar ancho ↔ alto)"
-          aria-label="Rotar dispositivo"
+          title="Cambiar orientación (vertical ↔ horizontal)"
+          aria-label="Cambiar orientación"
           onClick={(event) => {
             event.stopPropagation()
             rotatePane(pane.id)
           }}
         >
-          <ArrowLeftRight size={18} strokeWidth={1.75} />
+          {/* Phone tilted 90° = portrait/landscape swap (not confused with reload). */}
+          <Smartphone
+            size={18}
+            strokeWidth={1.75}
+            className="pane-orient-icon"
+          />
         </button>
         <ScreenshotMenu
           variant="pane"
