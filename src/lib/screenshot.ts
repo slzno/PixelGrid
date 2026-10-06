@@ -2,15 +2,36 @@ import { getWebview } from './webviewRegistry'
 
 export type ScreenshotQuality = 'native' | '1080p' | '2k' | '4k'
 
+function readCssViewport(webview: {
+  getAttribute(name: string): string | null
+  getBoundingClientRect(): DOMRect
+}): { cssWidth: number; cssHeight: number } {
+  const attrW = Number(webview.getAttribute('width'))
+  const attrH = Number(webview.getAttribute('height'))
+  if (
+    Number.isFinite(attrW) &&
+    Number.isFinite(attrH) &&
+    attrW > 1 &&
+    attrH > 1
+  ) {
+    return { cssWidth: Math.round(attrW), cssHeight: Math.round(attrH) }
+  }
+  const rect = webview.getBoundingClientRect()
+  return {
+    cssWidth: Math.max(1, Math.round(rect.width)),
+    cssHeight: Math.max(1, Math.round(rect.height)),
+  }
+}
+
 export const SCREENSHOT_QUALITIES: {
   id: ScreenshotQuality
   label: string
   hint: string
 }[] = [
-  { id: 'native', label: 'Viewport', hint: '1:1' },
-  { id: '1080p', label: '1080p', hint: '1920px' },
-  { id: '2k', label: '2K', hint: '2560px' },
-  { id: '4k', label: '4K', hint: '3840px' },
+  { id: 'native', label: 'Viewport', hint: 'retina' },
+  { id: '1080p', label: '1080p', hint: 'nítido' },
+  { id: '2k', label: '2K', hint: 'nítido' },
+  { id: '4k', label: '4K', hint: 'nítido' },
 ]
 
 const QUALITY_STORAGE_KEY = 'pixelgrid-screenshot-quality'
@@ -56,9 +77,13 @@ export async function capturePaneScreenshot(
     throw new Error('Panel no listo para capturar')
   }
 
+  const { cssWidth, cssHeight } = readCssViewport(webview)
+
   return (await window.ipcRenderer.invoke('pixelgrid:capture-screenshot', {
     webContentsId,
     quality: opts.quality,
+    cssWidth,
+    cssHeight,
   })) as {
     ok: boolean
     path?: string

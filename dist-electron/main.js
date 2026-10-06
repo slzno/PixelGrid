@@ -1,4 +1,4 @@
-import { ipcMain, webContents, dialog, app, BrowserWindow, BrowserView } from "electron";
+import { ipcMain, webContents, screen, dialog, app, BrowserWindow, BrowserView, nativeImage } from "electron";
 import { fileURLToPath } from "node:url";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -78,6 +78,54 @@ function clearDeviceEmulation(wc) {
   try {
     wc.disableDeviceEmulation();
   } catch {
+  }
+  try {
+    if (wc.debugger.isAttached()) {
+      void wc.debugger.sendCommand("Emulation.clearDeviceMetricsOverride").catch(() => void 0);
+    }
+  } catch {
+  }
+}
+async function captureViewportAtScale(wc, cssWidth, cssHeight, deviceScaleFactor) {
+  const dsf = Math.min(6, Math.max(1, deviceScaleFactor));
+  const width = Math.max(1, Math.round(cssWidth));
+  const height = Math.max(1, Math.round(cssHeight));
+  const attachedHere = !wc.debugger.isAttached();
+  if (attachedHere) {
+    wc.debugger.attach("1.3");
+  }
+  try {
+    await wc.debugger.sendCommand("Emulation.setDeviceMetricsOverride", {
+      width,
+      height,
+      deviceScaleFactor: dsf,
+      mobile: height > width,
+      scale: 1
+    });
+    await new Promise((r) => setTimeout(r, 80));
+    const shot = await wc.debugger.sendCommand("Page.captureScreenshot", {
+      format: "png",
+      fromSurface: true,
+      captureBeyondViewport: false
+    });
+    await wc.debugger.sendCommand("Emulation.clearDeviceMetricsOverride").catch(() => void 0);
+    const image = nativeImage.createFromBuffer(Buffer.from(shot.data, "base64"));
+    if (image.isEmpty()) {
+      throw new Error("Captura vacía");
+    }
+    return image;
+  } finally {
+    try {
+      await wc.debugger.sendCommand("Emulation.clearDeviceMetricsOverride").catch(() => void 0);
+    } catch {
+    }
+    clearDeviceEmulation(wc);
+    if (attachedHere && wc.debugger.isAttached()) {
+      try {
+        wc.debugger.detach();
+      } catch {
+      }
+    }
   }
 }
 ipcMain.handle(
@@ -165,7 +213,7 @@ ipcMain.handle("pixelgrid:devtools-hide", async () => {
 });
 const SCREENSHOT_LONG_EDGE = {
   native: 0,
-  // keep viewport pixels as-is
+  // CSS viewport × display scale (nítido)
   "1080p": 1920,
   "2k": 2560,
   "4k": 3840
@@ -183,28 +231,53 @@ ipcMain.handle(
         return { ok: false, error: "Panel webview no listo" };
       }
       clearDeviceEmulation(wc);
-      let image = await wc.capturePage();
+      const cssWidth = Math.max(1, Math.round(payload.cssWidth || 1));
+      const cssHeight = Math.max(1, Math.round(payload.cssHeight || 1));
+      if (cssWidth < 2 || cssHeight < 2) {
+        return { ok: false, error: "Viewport vacío" };
+      }
+      const cssLong = Math.max(cssWidth, cssHeight);
+      const targetLong = SCREENSHOT_LONG_EDGE[payload.quality] ?? 0;
+      const screenScale = Math.max(
+        1,
+        screen.getPrimaryDisplay().scaleFactor || 1
+      );
+      const deviceScaleFactor = targetLong > 0 ? Math.min(6, Math.max(1, targetLong / cssLong)) : Math.min(3, Math.max(2, screenScale));
+      let image;
+      try {
+        image = await captureViewportAtScale(
+          wc,
+          cssWidth,
+          cssHeight,
+          deviceScaleFactor
+        );
+      } catch {
+        image = await wc.capturePage();
+      }
       const src = image.getSize();
       if (src.width < 2 || src.height < 2) {
         return { ok: false, error: "Viewport vacío" };
       }
-      const targetLong = SCREENSHOT_LONG_EDGE[payload.quality] ?? 0;
       if (targetLong > 0) {
         const srcLong = Math.max(src.width, src.height);
-        const scale = targetLong / srcLong;
-        outW = Math.max(1, Math.round(src.width * scale));
-        outH = Math.max(1, Math.round(src.height * scale));
-        if (outW !== src.width || outH !== src.height) {
+        outW = Math.max(1, Math.round(src.width * (targetLong / srcLong)));
+        outH = Math.max(1, Math.round(src.height * (targetLong / srcLong)));
+        const drift = Math.abs(srcLong - targetLong) / targetLong;
+        if (drift > 0.02 && (outW !== src.width || outH !== src.height)) {
           image = image.resize({
             width: outW,
             height: outH,
             quality: "best"
           });
+        } else {
+          outW = src.width;
+          outH = src.height;
         }
       } else {
         outW = src.width;
         outH = src.height;
       }
+      clearDeviceEmulation(wc);
       const png = image.toPNG();
       const label = payload.quality === "native" ? "viewport" : payload.quality;
       const result = await dialog.showSaveDialog(win, {

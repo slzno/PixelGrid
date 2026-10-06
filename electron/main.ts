@@ -4,7 +4,10 @@ import {
   BrowserWindow,
   dialog,
   ipcMain,
+  nativeImage,
+  screen,
   webContents,
+  type NativeImage,
   type WebContents,
 } from 'electron'
 import { fileURLToPath } from 'node:url'
@@ -106,6 +109,80 @@ function clearDeviceEmulation(wc: WebContents) {
     wc.disableDeviceEmulation()
   } catch {
     // ignore
+  }
+  try {
+    if (wc.debugger.isAttached()) {
+      void wc.debugger
+        .sendCommand('Emulation.clearDeviceMetricsOverride')
+        .catch(() => undefined)
+    }
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Capture the guest viewport at a real deviceScaleFactor (sharp pixels),
+ * instead of soft-upscaling a small capturePage() bitmap to 2K/4K.
+ */
+async function captureViewportAtScale(
+  wc: WebContents,
+  cssWidth: number,
+  cssHeight: number,
+  deviceScaleFactor: number,
+): Promise<NativeImage> {
+  const dsf = Math.min(6, Math.max(1, deviceScaleFactor))
+  const width = Math.max(1, Math.round(cssWidth))
+  const height = Math.max(1, Math.round(cssHeight))
+
+  const attachedHere = !wc.debugger.isAttached()
+  if (attachedHere) {
+    wc.debugger.attach('1.3')
+  }
+
+  try {
+    await wc.debugger.sendCommand('Emulation.setDeviceMetricsOverride', {
+      width,
+      height,
+      deviceScaleFactor: dsf,
+      mobile: height > width,
+      scale: 1,
+    })
+
+    // Let Chromium paint at the new backing-store size.
+    await new Promise((r) => setTimeout(r, 80))
+
+    const shot = (await wc.debugger.sendCommand('Page.captureScreenshot', {
+      format: 'png',
+      fromSurface: true,
+      captureBeyondViewport: false,
+    })) as { data: string }
+
+    await wc.debugger
+      .sendCommand('Emulation.clearDeviceMetricsOverride')
+      .catch(() => undefined)
+
+    const image = nativeImage.createFromBuffer(Buffer.from(shot.data, 'base64'))
+    if (image.isEmpty()) {
+      throw new Error('Captura vacía')
+    }
+    return image
+  } finally {
+    try {
+      await wc.debugger
+        .sendCommand('Emulation.clearDeviceMetricsOverride')
+        .catch(() => undefined)
+    } catch {
+      // ignore
+    }
+    clearDeviceEmulation(wc)
+    if (attachedHere && wc.debugger.isAttached()) {
+      try {
+        wc.debugger.detach()
+      } catch {
+        // ignore
+      }
+    }
   }
 }
 
@@ -218,16 +295,16 @@ ipcMain.handle('pixelgrid:devtools-hide', async () => {
 })
 
 const SCREENSHOT_LONG_EDGE: Record<string, number> = {
-  native: 0, // keep viewport pixels as-is
+  native: 0, // CSS viewport × display scale (nítido)
   '1080p': 1920,
   '2k': 2560,
   '4k': 3840,
 }
 
 /**
- * Capture ONLY the visible guest viewport (what the pane shows),
- * then optionally scale the export to 1080p / 2K / 4K on the long edge.
- * Never uses full-page or CDP metrics overrides (those broke the shot).
+ * Capture ONLY the visible guest viewport.
+ * High qualities re-render at a higher deviceScaleFactor (sharp),
+ * instead of soft-upscaling a tiny bitmap.
  */
 ipcMain.handle(
   'pixelgrid:capture-screenshot',
@@ -236,6 +313,8 @@ ipcMain.handle(
     payload: {
       webContentsId: number
       quality: 'native' | '1080p' | '2k' | '4k'
+      cssWidth?: number
+      cssHeight?: number
     },
   ) => {
     let wc: WebContents | undefined
@@ -251,30 +330,64 @@ ipcMain.handle(
 
       clearDeviceEmulation(wc)
 
-      // Visible viewport only — not the full scrollable page.
-      let image = await wc.capturePage()
+      const cssWidth = Math.max(1, Math.round(payload.cssWidth || 1))
+      const cssHeight = Math.max(1, Math.round(payload.cssHeight || 1))
+      if (cssWidth < 2 || cssHeight < 2) {
+        return { ok: false, error: 'Viewport vacío' }
+      }
+      const cssLong = Math.max(cssWidth, cssHeight)
+      const targetLong = SCREENSHOT_LONG_EDGE[payload.quality] ?? 0
+
+      // native → retina del display; 1080p/2K/4K → DSF para que Chromium pinte más píxeles
+      const screenScale = Math.max(
+        1,
+        screen.getPrimaryDisplay().scaleFactor || 1,
+      )
+      const deviceScaleFactor =
+        targetLong > 0
+          ? Math.min(6, Math.max(1, targetLong / cssLong))
+          : Math.min(3, Math.max(2, screenScale))
+
+      let image: NativeImage
+      try {
+        image = await captureViewportAtScale(
+          wc,
+          cssWidth,
+          cssHeight,
+          deviceScaleFactor,
+        )
+      } catch {
+        // Fallback: visible surface only (may be softer for 2K/4K).
+        image = await wc.capturePage()
+      }
+
       const src = image.getSize()
       if (src.width < 2 || src.height < 2) {
         return { ok: false, error: 'Viewport vacío' }
       }
 
-      const targetLong = SCREENSHOT_LONG_EDGE[payload.quality] ?? 0
       if (targetLong > 0) {
         const srcLong = Math.max(src.width, src.height)
-        const scale = targetLong / srcLong
-        outW = Math.max(1, Math.round(src.width * scale))
-        outH = Math.max(1, Math.round(src.height * scale))
-        if (outW !== src.width || outH !== src.height) {
+        outW = Math.max(1, Math.round(src.width * (targetLong / srcLong)))
+        outH = Math.max(1, Math.round(src.height * (targetLong / srcLong)))
+        // Only nudge size if CDP landed a few px off (avoid big soft upscales).
+        const drift = Math.abs(srcLong - targetLong) / targetLong
+        if (drift > 0.02 && (outW !== src.width || outH !== src.height)) {
           image = image.resize({
             width: outW,
             height: outH,
             quality: 'best',
           })
+        } else {
+          outW = src.width
+          outH = src.height
         }
       } else {
         outW = src.width
         outH = src.height
       }
+
+      clearDeviceEmulation(wc)
 
       const png = image.toPNG()
       const label =
