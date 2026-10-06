@@ -458,6 +458,7 @@ export function Pane({ pane, compact = false }: PaneProps) {
             frameH={mockup.frameH}
             baseW={mockup.baseW}
             baseH={mockup.baseH}
+            buttonGutter={mockup.buttonGutter}
           >
             {viewport}
           </DeviceMockup>

@@ -14,10 +14,21 @@
   --pg-font: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --pg-topbar-h: 36px;
 
-  /* Device mockups — Space Gray limpio */
-  --pg-mockup-shell: #5c5f66;
-  --pg-mockup-shell-dark: #3e4148;
-  --pg-mockup-face: #2a2c31;
+  /* Device mockups — Space Gray profesional */
+  --pg-mockup-aluminum: linear-gradient(
+    155deg,
+    #c5c7cc 0%,
+    #8e9198 22%,
+    #6a6d74 55%,
+    #55585f 100%
+  );
+  --pg-mockup-aluminum-deep: linear-gradient(
+    180deg,
+    #a8abb2 0%,
+    #6a6d74 40%,
+    #4a4d54 100%
+  );
+  --pg-mockup-body: #0c0d10;
 }
 
 * {
@@ -468,7 +479,7 @@ select {
   border-radius: inherit;
 }
 
-/* Device mockups — Space Gray, mínimo y limpio */
+/* Device mockups — calidad profesional (Space Gray) */
 
 .device-mockup {
   display: flex;
@@ -477,23 +488,50 @@ select {
   flex: 0 0 auto;
 }
 
-.device-mockup-frame {
+.device-mockup-shell-wrap {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+.device-mockup-shell {
   position: relative;
   box-sizing: border-box;
-  background: var(--pg-mockup-face);
-  border: 3px solid var(--pg-mockup-shell);
+  background: var(--pg-mockup-aluminum);
   box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.35),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+    0 28px 50px -18px rgba(0, 0, 0, 0.65),
+    0 10px 18px -10px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.35),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12);
   display: flex;
   align-items: stretch;
   justify-content: center;
 }
 
-.device-mockup.kind-laptop .device-mockup-frame,
-.device-mockup.kind-desktop .device-mockup-frame {
-  border-color: var(--pg-mockup-shell-dark);
-  border-width: 2px;
+/* Anillo interior negro (cristal / bisel frontal) */
+.device-mockup-shell::before {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border-radius: calc(var(--dm-radius, 40px) - 3px);
+  background: var(--pg-mockup-body);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 0 0 1px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.device-mockup.kind-laptop .device-mockup-shell,
+.device-mockup.kind-desktop .device-mockup-shell {
+  background: var(--pg-mockup-aluminum-deep);
+  border-radius: 12px 12px 8px 8px;
+}
+
+.device-mockup.kind-laptop .device-mockup-shell::before,
+.device-mockup.kind-desktop .device-mockup-shell::before {
+  inset: 2px;
   border-radius: 10px 10px 6px 6px;
 }
 
@@ -501,76 +539,165 @@ select {
   position: relative;
   z-index: 1;
   overflow: hidden;
-  background: #fff;
+  background: #111;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.55),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
   flex: 0 0 auto;
 }
 
+/* Hardware buttons — Space Gray */
+.device-mockup-hardbtn {
+  position: absolute;
+  z-index: 2;
+  background: linear-gradient(180deg, #b0b3ba 0%, #7a7d84 40%, #5a5d64 100%);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  pointer-events: none;
+}
+
+.device-mockup-hardbtn.power {
+  right: 0;
+  top: 22%;
+  width: 3px;
+  height: 10%;
+  min-height: 32px;
+  border-radius: 0 2px 2px 0;
+}
+
+.device-mockup-hardbtn.mute {
+  left: 0;
+  top: 16%;
+  width: 3px;
+  height: 4%;
+  min-height: 14px;
+  border-radius: 2px 0 0 2px;
+}
+
+.device-mockup-hardbtn.vol-up,
+.device-mockup-hardbtn.vol-down {
+  left: 0;
+  width: 3px;
+  height: 7%;
+  min-height: 24px;
+  border-radius: 2px 0 0 2px;
+}
+
+.device-mockup-hardbtn.vol-up {
+  top: 22%;
+}
+
+.device-mockup-hardbtn.vol-down {
+  top: 32%;
+}
+
+/* Dynamic Island / punch-hole over screen (como en dispositivos reales) */
 .device-mockup-island,
-.device-mockup-pill,
-.device-mockup-camera {
+.device-mockup-punch,
+.device-mockup-webcam {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 2;
+  z-index: 5;
   pointer-events: none;
 }
 
 .device-mockup-island {
   border-radius: 999px;
-  background: #0a0a0c;
+  background: #000;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
 }
 
 .device-mockup-island::after {
   content: '';
   position: absolute;
-  right: 16%;
+  right: 12%;
   top: 50%;
-  width: 26%;
-  height: 52%;
+  width: 28%;
+  height: 58%;
   transform: translateY(-50%);
   border-radius: 999px;
-  background: #2a3140;
+  background: radial-gradient(
+    circle at 35% 35%,
+    #4a5568 0%,
+    #1a2030 55%,
+    #050608 100%
+  );
 }
 
-.device-mockup-pill {
-  border-radius: 999px;
-  background: #0a0a0c;
-}
-
-.device-mockup-camera {
+.device-mockup-punch {
   border-radius: 50%;
-  background: #1a1c22;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  background: radial-gradient(
+    circle at 35% 30%,
+    #3d4658 0%,
+    #12151c 55%,
+    #000 100%
+  );
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5);
+}
+
+.device-mockup-webcam {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  pointer-events: none;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 35% 30%,
+    #5a6578 0%,
+    #1a1e28 60%,
+    #0a0c10 100%
+  );
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
 }
 
 .device-mockup-laptop-base {
-  width: 100%;
+  position: relative;
   margin-top: -1px;
-  border-radius: 0 0 10px 10px;
-  background: var(--pg-mockup-shell-dark);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+  border-radius: 0 0 12px 12px;
+  background: var(--pg-mockup-aluminum-deep);
+  box-shadow:
+    0 14px 28px -12px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.device-mockup-laptop-indent {
+  margin-top: 4px;
+  width: 14%;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: rgba(0, 0, 0, 0.45);
 }
 
 .device-mockup-desktop-stand {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-top: 4px;
+  margin-top: 2px;
 }
 
 .device-mockup-desktop-neck {
   width: 14%;
-  height: 50%;
-  background: var(--pg-mockup-shell-dark);
+  height: 48%;
+  background: linear-gradient(180deg, #9a9da5, #55585f);
   border-radius: 2px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15);
 }
 
 .device-mockup-desktop-foot {
   width: 100%;
   height: 22%;
   margin-top: auto;
-  border-radius: 4px;
-  background: var(--pg-mockup-shell);
+  border-radius: 5px;
+  background: linear-gradient(180deg, #8e9198, #4a4d54);
+  box-shadow:
+    0 6px 14px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .viewport-scale {

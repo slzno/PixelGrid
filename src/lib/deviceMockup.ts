@@ -11,10 +11,11 @@ export type MockupSpec = {
   left: number
   /** Outer corner radius (device px). */
   radius: number
-  /** Screen corner radius inside bezel (device px). */
+  /** Screen corner radius — nested inside outer radius. */
   screenRadius: number
-  /** iPhone-style dynamic island / Android camera. */
-  chrome: 'island' | 'pill' | 'camera' | 'none'
+  chrome: 'island' | 'punch' | 'camera' | 'none'
+  /** Show subtle hardware side buttons. */
+  buttons: boolean
 }
 
 const NONE: MockupSpec = {
@@ -26,6 +27,7 @@ const NONE: MockupSpec = {
   radius: 0,
   screenRadius: 0,
   chrome: 'none',
+  buttons: false,
 }
 
 export function resolveMockupKind(
@@ -45,6 +47,10 @@ export function resolveMockupKind(
   return 'none'
 }
 
+/**
+ * Proportions inspired by current flagship frames:
+ * outer radius ≈ bezel + screen radius (constant-width rim).
+ */
 export function getMockupSpec(
   form: DeviceForm | undefined,
   category: DeviceCategory | undefined,
@@ -53,54 +59,62 @@ export function getMockupSpec(
 
   if (kind === 'phone') {
     const isIphone = category === 'iphone'
+    const bezel = 12
+    const screenRadius = 34
     return {
       kind,
-      top: 16,
-      right: 12,
-      bottom: 16,
-      left: 12,
-      radius: 42,
-      screenRadius: 32,
-      chrome: isIphone ? 'island' : 'pill',
+      top: bezel,
+      right: bezel,
+      bottom: bezel,
+      left: bezel,
+      radius: bezel + screenRadius,
+      screenRadius,
+      chrome: isIphone ? 'island' : 'punch',
+      buttons: true,
     }
   }
 
   if (kind === 'tablet') {
+    const bezel = 14
+    const screenRadius = 12
     return {
       kind,
-      top: 18,
-      right: 16,
-      bottom: 18,
-      left: 16,
-      radius: 28,
-      screenRadius: 12,
+      top: bezel,
+      right: bezel,
+      bottom: bezel,
+      left: bezel,
+      radius: bezel + screenRadius,
+      screenRadius,
       chrome: 'camera',
+      buttons: false,
     }
   }
 
   if (kind === 'laptop') {
     return {
       kind,
-      top: 20,
+      top: 22,
       right: 14,
       bottom: 14,
       left: 14,
       radius: 12,
       screenRadius: 4,
       chrome: 'camera',
+      buttons: false,
     }
   }
 
   if (kind === 'desktop') {
     return {
       kind,
-      top: 12,
-      right: 12,
-      bottom: 12,
-      left: 12,
+      top: 14,
+      right: 14,
+      bottom: 14,
+      left: 14,
       radius: 10,
       screenRadius: 3,
-      chrome: 'none',
+      chrome: 'camera',
+      buttons: false,
     }
   }
 
@@ -118,25 +132,31 @@ export function mockupOuterSize(
   const padY = Math.round((spec.top + spec.bottom) * scale)
   const frameW = screenW + padX
   const frameH = screenH + padY
+
+  // Side buttons sit outside the shell; reserve a few px so toolbar aligns.
+  const buttonGutter =
+    spec.buttons && scale > 0.2 ? Math.round(4 * scale) : 0
+
   const baseExtra =
     spec.kind === 'laptop'
       ? {
-          width: Math.round(frameW * 1.1),
-          height: Math.round(20 * scale),
+          width: Math.round(frameW * 1.12),
+          height: Math.round(22 * scale),
         }
       : spec.kind === 'desktop'
         ? {
-            width: Math.round(frameW * 0.4),
-            height: Math.round(30 * scale),
+            width: Math.round(frameW * 0.44),
+            height: Math.round(36 * scale),
           }
         : { width: 0, height: 0 }
 
   return {
     frameW,
     frameH,
-    outerW: Math.max(frameW, baseExtra.width),
+    outerW: Math.max(frameW, baseExtra.width) + buttonGutter * 2,
     outerH: frameH + baseExtra.height,
     baseW: baseExtra.width,
     baseH: baseExtra.height,
+    buttonGutter,
   }
 }
