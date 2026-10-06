@@ -16,7 +16,11 @@ import {
   safeExecuteJavaScript,
   type WebviewEl,
 } from '../lib/webviewRegistry'
-import { applyWebviewFill, emulateWebviewViewport } from '../lib/webviewSize'
+import {
+  clearPaneSizeLock,
+  lockWebviewSize,
+  setPaneSizeLock,
+} from '../lib/webviewSize'
 import { clampZoom } from '../lib/zoom'
 import type { Pane as PaneModel } from '../store/appState'
 import { useAppStore } from '../store/useAppStore'
@@ -36,6 +40,7 @@ type PaneProps = {
 export function Pane({ pane, compact = false }: PaneProps) {
   const webviewRef = useRef<WebviewEl | null>(null)
   const readyRef = useRef(false)
+  const urlRef = useRef('')
   const toolStateRef = useRef({
     syncEnabled: true,
     syncScroll: true,
@@ -52,6 +57,7 @@ export function Pane({ pane, compact = false }: PaneProps) {
     setPaneColor,
   } = useAppStore()
 
+  urlRef.current = state.url
   toolStateRef.current = {
     syncEnabled: state.syncEnabled,
     syncScroll: state.syncScroll,
@@ -70,12 +76,22 @@ export function Pane({ pane, compact = false }: PaneProps) {
   const isInspecting = pane.activeTool === 'inspect'
   const preset = getPresetById(pane.presetId ?? '')
   const form = preset?.form ?? 'freeform'
+
+  useEffect(() => {
+    setPaneSizeLock(pane.id, viewWidth, viewHeight)
+  }, [pane.id, viewWidth, viewHeight])
+
+  useEffect(() => {
+    return () => clearPaneSizeLock(pane.id)
+  }, [pane.id])
+
   useEffect(() => {
     const webview = webviewRef.current
     if (!webview) return
 
     readyRef.current = false
     registerWebview(pane.id, webview)
+    setPaneSizeLock(pane.id, viewWidth, viewHeight)
 
     const installGuestTools = () => {
       if (!readyRef.current) return
@@ -107,24 +123,55 @@ export function Pane({ pane, compact = false }: PaneProps) {
       )
     }
 
+    const lockSize = () => {
+      setPaneSizeLock(pane.id, viewWidth, viewHeight)
+      lockWebviewSize(webview, viewWidth, viewHeight)
+    }
+
+    const scheduleRelock = () => {
+      lockSize()
+      window.setTimeout(lockSize, 50)
+      window.setTimeout(lockSize, 200)
+      window.setTimeout(lockSize, 500)
+    }
+
     const onDomReady = () => {
       readyRef.current = true
-      applyWebviewFill(webview)
-      void emulateWebviewViewport(webview, viewWidth, viewHeight)
+      scheduleRelock()
       installGuestTools()
       applyDark()
       setLoadError(null)
     }
 
+    const onStartLoading = () => {
+      lockSize()
+    }
+
+    const onFinishLoad = () => {
+      readyRef.current = true
+      scheduleRelock()
+      installGuestTools()
+      applyDark()
+    }
+
     const onNavigate = (event: Event & Record<string, unknown>) => {
-      if (!readyRef.current) return
+      scheduleRelock()
       try {
         const url =
           typeof event.url === 'string' ? event.url : webview.getURL()
-        if (url) setUrlFromWebview(url)
+        // Ignore transient reload/blank URLs so we don't thrash navigation state.
+        if (
+          url &&
+          url !== 'about:blank' &&
+          !url.startsWith('chrome-error://') &&
+          url !== urlRef.current
+        ) {
+          setUrlFromWebview(url)
+        }
       } catch {
         // not ready
       }
+      if (!readyRef.current) return
       installGuestTools()
       applyDark()
     }
@@ -205,14 +252,21 @@ export function Pane({ pane, compact = false }: PaneProps) {
     }
 
     webview.addEventListener('dom-ready', onDomReady)
+    webview.addEventListener('did-start-loading', onStartLoading)
+    webview.addEventListener('did-finish-load', onFinishLoad)
     webview.addEventListener('did-navigate', onNavigate)
     webview.addEventListener('did-navigate-in-page', onNavigate)
     webview.addEventListener('did-fail-load', onFail)
     webview.addEventListener('console-message', onConsoleMessage)
 
+    // Initial lock in case the element is already attached.
+    lockSize()
+
     return () => {
       readyRef.current = false
       webview.removeEventListener('dom-ready', onDomReady)
+      webview.removeEventListener('did-start-loading', onStartLoading)
+      webview.removeEventListener('did-finish-load', onFinishLoad)
       webview.removeEventListener('did-navigate', onNavigate)
       webview.removeEventListener('did-navigate-in-page', onNavigate)
       webview.removeEventListener('did-fail-load', onFail)
@@ -235,8 +289,14 @@ export function Pane({ pane, compact = false }: PaneProps) {
     const webview = webviewRef.current
     if (!webview || !readyRef.current) return
     try {
+      if (typeof webview.isLoading === 'function' && webview.isLoading()) return
       const current = webview.getURL()
-      if (current && current !== state.url) {
+      if (
+        current &&
+        current !== state.url &&
+        current !== 'about:blank' &&
+        state.url
+      ) {
         void webview.loadURL(state.url)
       }
     } catch {
@@ -256,10 +316,7 @@ export function Pane({ pane, compact = false }: PaneProps) {
   useEffect(() => {
     const webview = webviewRef.current
     if (!webview) return
-    applyWebviewFill(webview)
-    if (readyRef.current) {
-      void emulateWebviewViewport(webview, viewWidth, viewHeight)
-    }
+    lockWebviewSize(webview, viewWidth, viewHeight)
   }, [viewWidth, viewHeight, scale])
 
   useEffect(() => {
@@ -298,10 +355,10 @@ export function Pane({ pane, compact = false }: PaneProps) {
     inset: 0,
     top: 0,
     left: 0,
-    width: '100%',
-    height: '100%',
-    minWidth: '100%',
-    minHeight: '100%',
+    width: viewWidth,
+    height: viewHeight,
+    minWidth: viewWidth,
+    minHeight: viewHeight,
     display: 'flex',
     border: 0,
     margin: 0,
@@ -361,14 +418,14 @@ export function Pane({ pane, compact = false }: PaneProps) {
                   readyRef.current = false
                   return
                 }
-                applyWebviewFill(el)
+                lockWebviewSize(el, viewWidth, viewHeight)
               }}
               src={state.url}
               className="pane-webview"
               {...({
-                width: '100%',
-                height: '100%',
-              } as Record<string, string>)}
+                width: viewWidth,
+                height: viewHeight,
+              } as Record<string, number>)}
               style={webviewStyle}
               allowpopups={'true' as unknown as boolean}
               webpreferences="contextIsolation=yes"

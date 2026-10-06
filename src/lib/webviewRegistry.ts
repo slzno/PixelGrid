@@ -11,6 +11,8 @@ type WebviewEl = HTMLElement & {
   goBack(): void
   goForward(): void
   reload(): void
+  reloadIgnoringCache(): void
+  isLoading(): boolean
   loadURL(url: string): Promise<void>
   capturePage(): Promise<NativeImageLike>
   setZoomFactor(factor: number): void
@@ -67,6 +69,41 @@ export function safeExecuteJavaScript(webview: WebviewEl, code: string) {
     return webview.executeJavaScript(code).catch(() => undefined)
   } catch {
     return Promise.resolve(undefined)
+  }
+}
+
+export function safeReload(webview: WebviewEl) {
+  try {
+    const url = webview.getURL()
+    // loadURL keeps the host element size more stable than reload()
+    // (reload() often re-triggers broken device-emulation scale).
+    if (url && url !== 'about:blank') {
+      void webview.loadURL(url)
+      return
+    }
+    webview.reload()
+  } catch {
+    try {
+      webview.reload()
+    } catch {
+      // guest not ready
+    }
+  }
+}
+
+export function safeGoBack(webview: WebviewEl) {
+  try {
+    if (webview.canGoBack()) webview.goBack()
+  } catch {
+    // guest not ready
+  }
+}
+
+export function safeGoForward(webview: WebviewEl) {
+  try {
+    if (webview.canGoForward()) webview.goForward()
+  } catch {
+    // guest not ready
   }
 }
 

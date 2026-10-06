@@ -53,8 +53,8 @@ export type AppState = {
   sidePanelOpen: boolean
 }
 
-export const STORAGE_KEY = 'pixelgrid-state-v8'
-export const DEFAULT_URL = 'https://example.com'
+export const STORAGE_KEY = 'pixelgrid-state-v9'
+export const DEFAULT_URL = 'https://es.wikipedia.org'
 export const TOPBAR_HEIGHT = 36
 
 function createId() {

@@ -8,7 +8,10 @@ import {
   PanesIcon,
   RulerIcon,
 } from './icons/ToolIcons'
-import { capturePaneScreenshot } from '../lib/screenshot'
+import {
+  capturePaneScreenshot,
+  getStoredScreenshotQuality,
+} from '../lib/screenshot'
 import { getEyedropperScript } from '../lib/toolsScripts'
 import { getWebview, safeExecuteJavaScript } from '../lib/webviewRegistry'
 import type { Pane, PaneTool } from '../store/appState'
@@ -67,7 +70,11 @@ export function PaneTools({ pane, compactTools = false }: PaneToolsProps) {
   const onScreenshot = async () => {
     setFocusedPane(pane.id)
     try {
-      const result = await capturePaneScreenshot(pane.id)
+      const result = await capturePaneScreenshot(pane.id, {
+        width: pane.width,
+        height: pane.height,
+        quality: getStoredScreenshotQuality(),
+      })
       if (result.canceled) {
         setStatusMessage('Screenshot canceled')
         return

@@ -28,8 +28,6 @@ function createWindow() {
     }
   });
   win.setMenuBarVisibility(false);
-  win.on("resize", () => {
-  });
   win.on("closed", () => {
     devtoolsView = null;
     attachedGuestId = null;
@@ -55,13 +53,13 @@ function ensureDevToolsView() {
   return devtoolsView;
 }
 function applyDevToolsBounds(bounds) {
-  if (!devtoolsView) return;
-  devtoolsView.setBounds({
-    x: Math.max(0, Math.round(bounds.x)),
-    y: Math.max(0, Math.round(bounds.y)),
-    width: Math.max(120, Math.round(bounds.width)),
-    height: Math.max(120, Math.round(bounds.height))
-  });
+  if (!devtoolsView || !win) return;
+  const [winW, winH] = win.getContentSize();
+  const x = Math.min(winW - 120, Math.max(200, Math.round(bounds.x)));
+  const y = Math.min(winH - 120, Math.max(36, Math.round(bounds.y)));
+  const width = Math.max(120, Math.min(Math.round(bounds.width), winW - x));
+  const height = Math.max(120, Math.min(Math.round(bounds.height), winH - y));
+  devtoolsView.setBounds({ x, y, width, height });
 }
 function hideDevToolsView() {
   if (attachedGuestId !== null) {
@@ -76,28 +74,27 @@ function hideDevToolsView() {
   }
   devtoolsView = null;
 }
+function clearDeviceEmulation(wc) {
+  try {
+    wc.disableDeviceEmulation();
+  } catch {
+  }
+}
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 ipcMain.handle(
-  "pixelgrid:emulate-viewport",
+  "pixelgrid:clear-emulation",
   async (_event, payload) => {
     try {
       const wc = webContents.fromId(payload.webContentsId);
-      if (!wc || wc.isDestroyed()) return { ok: false, error: "Missing webContents" };
-      const width = Math.max(1, Math.round(payload.width));
-      const height = Math.max(1, Math.round(payload.height));
-      const mobile = height >= width;
-      wc.enableDeviceEmulation({
-        screenPosition: mobile ? "mobile" : "desktop",
-        screenSize: { width, height },
-        viewSize: { width, height },
-        viewPosition: { x: 0, y: 0 },
-        deviceScaleFactor: 1,
-        scale: 1
-      });
+      if (!wc || wc.isDestroyed()) return { ok: false };
+      clearDeviceEmulation(wc);
       return { ok: true };
     } catch (error) {
       return {
         ok: false,
-        error: error instanceof Error ? error.message : "Emulation failed"
+        error: error instanceof Error ? error.message : "Clear failed"
       };
     }
   }
@@ -164,26 +161,107 @@ ipcMain.handle("pixelgrid:devtools-hide", async () => {
     };
   }
 });
+const SCREENSHOT_LONG_EDGE = {
+  "1080p": 1920,
+  "2k": 2560,
+  "4k": 3840
+};
+async function captureWithCdp(wc, cssW, cssH, scale) {
+  if (wc.debugger.isAttached()) return null;
+  try {
+    wc.debugger.attach("1.3");
+    await wc.debugger.sendCommand("Emulation.setDeviceMetricsOverride", {
+      width: cssW,
+      height: cssH,
+      deviceScaleFactor: scale,
+      mobile: cssH >= cssW,
+      scale: 1
+    });
+    await delay(200);
+    const shot = await wc.debugger.sendCommand("Page.captureScreenshot", {
+      format: "png",
+      fromSurface: true,
+      captureBeyondViewport: true
+    });
+    return Buffer.from(shot.data, "base64");
+  } catch {
+    return null;
+  } finally {
+    try {
+      await wc.debugger.sendCommand("Emulation.clearDeviceMetricsOverride");
+    } catch {
+    }
+    try {
+      if (wc.debugger.isAttached()) wc.debugger.detach();
+    } catch {
+    }
+    clearDeviceEmulation(wc);
+  }
+}
+async function captureWithResize(wc, _cssW, _cssH, outW, outH) {
+  clearDeviceEmulation(wc);
+  await delay(40);
+  let image = await wc.capturePage();
+  const size = image.getSize();
+  if (size.width !== outW || size.height !== outH) {
+    image = image.resize({
+      width: outW,
+      height: outH,
+      quality: "best"
+    });
+  }
+  return image;
+}
 ipcMain.handle(
-  "pixelgrid:save-screenshot",
-  async (_event, dataUrl) => {
+  "pixelgrid:capture-screenshot",
+  async (_event, payload) => {
+    const cssW = Math.max(1, Math.round(payload.width));
+    const cssH = Math.max(1, Math.round(payload.height));
+    const targetLong = SCREENSHOT_LONG_EDGE[payload.quality] ?? 3840;
+    const longEdge = Math.max(cssW, cssH);
+    const scale = Math.max(1, targetLong / longEdge);
+    const outW = Math.round(cssW * scale);
+    const outH = Math.round(cssH * scale);
+    let wc;
+    const hadEmbeddedDevTools = attachedGuestId === payload.webContentsId && devtoolsView !== null;
     try {
       if (!win) return { ok: false, error: "No window" };
+      wc = webContents.fromId(payload.webContentsId);
+      if (!wc || wc.isDestroyed()) {
+        return { ok: false, error: "Panel webview no listo" };
+      }
+      if (hadEmbeddedDevTools) {
+        hideDevToolsView();
+        await delay(60);
+      }
+      let png = await captureWithCdp(wc, cssW, cssH, scale);
+      if (!png) {
+        const image = await captureWithResize(wc, cssW, cssH, outW, outH);
+        png = image.toPNG();
+      }
+      clearDeviceEmulation(wc);
       const result = await dialog.showSaveDialog(win, {
-        title: "Save screenshot",
-        defaultPath: `pixelgrid-${Date.now()}.png`,
+        title: `Save screenshot (${payload.quality.toUpperCase()})`,
+        defaultPath: `pixelgrid-${payload.quality}-${outW}x${outH}-${Date.now()}.png`,
         filters: [{ name: "PNG", extensions: ["png"] }]
       });
       if (result.canceled || !result.filePath) {
-        return { ok: false, canceled: true };
+        return { ok: false, canceled: true, width: outW, height: outH };
       }
-      const base64 = dataUrl.replace(/^data:image\/png;base64,/, "");
-      await fs.writeFile(result.filePath, Buffer.from(base64, "base64"));
-      return { ok: true, path: result.filePath };
+      await fs.writeFile(result.filePath, png);
+      return {
+        ok: true,
+        path: result.filePath,
+        width: outW,
+        height: outH
+      };
     } catch (error) {
+      if (wc && !wc.isDestroyed()) {
+        clearDeviceEmulation(wc);
+      }
       return {
         ok: false,
-        error: error instanceof Error ? error.message : "Save failed"
+        error: error instanceof Error ? error.message : "Capture failed"
       };
     }
   }

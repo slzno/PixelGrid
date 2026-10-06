@@ -454,19 +454,14 @@ select {
   /* Explicit width/height come from inline style (device px). */
 }
 
-/* Electron <webview> needs absolute fill — % alone often collapses to ~150px. */
+/* Explicit W×H come from inline style/attrs — do NOT force 100% here
+   (Electron treats attribute "100%" as ~100px and panels shrink on reload). */
 .viewport-scale .pane-webview,
 webview.pane-webview {
   position: absolute !important;
   inset: 0 !important;
   top: 0 !important;
   left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-  min-width: 100% !important;
-  min-height: 100% !important;
   display: flex !important;
   border: 0 !important;
   margin: 0 !important;

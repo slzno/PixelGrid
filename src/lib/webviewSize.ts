@@ -1,33 +1,50 @@
-import type { WebviewEl } from './webviewRegistry'
+import { getWebview, type WebviewEl } from './webviewRegistry'
+
+type SizeLock = { width: number; height: number }
+
+const sizeLocks = new Map<string, SizeLock>()
 
 /**
- * Make <webview> fill its sized parent (width/height: 100%).
- * Electron ignores % height unless the element is explicitly stretched.
+ * Size the <webview> to real device pixels.
+ * Never use attribute "100%" — Electron parses it as ~100px.
+ *
+ * IMPORTANT: do NOT leave enableDeviceEmulation active for normal browsing.
+ * After reload, Chromium recalculates emulation `scale` and the panel looks
+ * shrunk. Media queries / 100vh work from the element box size alone.
  */
-export function applyWebviewFill(webview: WebviewEl) {
-  webview.setAttribute('width', '100%')
-  webview.setAttribute('height', '100%')
-  webview.style.cssText = [
-    'position:absolute',
-    'inset:0',
-    'top:0',
-    'left:0',
-    'right:0',
-    'bottom:0',
-    'width:100%',
-    'height:100%',
-    'min-width:100%',
-    'min-height:100%',
-    'max-width:none',
-    'max-height:none',
-    'display:flex',
-    'border:0',
-    'margin:0',
-    'padding:0',
-    'box-sizing:border-box',
-    'background:#fff',
-    'transform:none',
-  ].join(';')
+export function applyWebviewFill(
+  webview: WebviewEl,
+  width: number,
+  height: number,
+) {
+  const w = Math.max(1, Math.round(width))
+  const h = Math.max(1, Math.round(height))
+  const wPx = `${w}px`
+  const hPx = `${h}px`
+
+  webview.setAttribute('width', String(w))
+  webview.setAttribute('height', String(h))
+
+  webview.style.position = 'absolute'
+  webview.style.inset = '0'
+  webview.style.top = '0'
+  webview.style.left = '0'
+  webview.style.right = 'auto'
+  webview.style.bottom = 'auto'
+  webview.style.width = wPx
+  webview.style.height = hPx
+  webview.style.minWidth = wPx
+  webview.style.minHeight = hPx
+  webview.style.maxWidth = wPx
+  webview.style.maxHeight = hPx
+  webview.style.display = 'flex'
+  webview.style.border = '0'
+  webview.style.margin = '0'
+  webview.style.padding = '0'
+  webview.style.boxSizing = 'border-box'
+  webview.style.background = '#fff'
+  webview.style.transform = 'none'
+  webview.style.transformOrigin = 'top left'
 
   try {
     webview.setZoomFactor?.(1)
@@ -36,51 +53,54 @@ export function applyWebviewFill(webview: WebviewEl) {
   }
 }
 
-/** @deprecated Prefer applyWebviewFill + sized parent. */
-export function applyWebviewViewport(
-  webview: WebviewEl,
-  width: number,
-  height: number,
-  scale = 1,
-) {
-  const wPx = `${Math.max(1, Math.round(width))}px`
-  const hPx = `${Math.max(1, Math.round(height))}px`
-
-  webview.style.cssText = [
-    'display:flex',
-    'position:relative',
-    `width:${wPx}`,
-    `height:${hPx}`,
-    `min-width:${wPx}`,
-    `min-height:${hPx}`,
-    'border:0',
-    'background:#fff',
-    'transform-origin:0 0',
-    scale !== 1 ? `transform:scale(${scale})` : 'transform:none',
-  ].join(';')
-
-  try {
-    webview.setZoomFactor?.(1)
-  } catch {
-    // ignore
-  }
-}
-
-/** Tell Chromium the guest viewport is exactly width×height (Polypane-like). */
-export async function emulateWebviewViewport(
-  webview: WebviewEl,
-  width: number,
-  height: number,
-) {
+/** Clear leftover enableDeviceEmulation / CDP metrics that shrink the guest. */
+export async function clearWebviewEmulation(webview: WebviewEl) {
   try {
     const webContentsId = webview.getWebContentsId?.()
     if (typeof webContentsId !== 'number') return
-    await window.ipcRenderer.invoke('pixelgrid:emulate-viewport', {
+    await window.ipcRenderer.invoke('pixelgrid:clear-emulation', {
       webContentsId,
-      width,
-      height,
     })
   } catch {
-    // ignore if guest is not ready yet
+    // ignore
   }
+}
+
+export function lockWebviewSize(
+  webview: WebviewEl,
+  width: number,
+  height: number,
+) {
+  applyWebviewFill(webview, width, height)
+  void clearWebviewEmulation(webview)
+}
+
+export function setPaneSizeLock(
+  paneId: string,
+  width: number,
+  height: number,
+) {
+  sizeLocks.set(paneId, {
+    width: Math.max(1, Math.round(width)),
+    height: Math.max(1, Math.round(height)),
+  })
+}
+
+export function clearPaneSizeLock(paneId: string) {
+  sizeLocks.delete(paneId)
+}
+
+export function relockAllPanes() {
+  for (const [paneId, size] of sizeLocks) {
+    const webview = getWebview(paneId)
+    if (!webview) continue
+    lockWebviewSize(webview, size.width, size.height)
+  }
+}
+
+export function relockPane(paneId: string) {
+  const size = sizeLocks.get(paneId)
+  const webview = getWebview(paneId)
+  if (!size || !webview) return
+  lockWebviewSize(webview, size.width, size.height)
 }

@@ -1,7 +1,16 @@
 import { useEffect, useRef } from 'react'
-import { Camera, Code2, Layers, Moon, RotateCw, X } from 'lucide-react'
+import {
+  ArrowLeftRight,
+  Code2,
+  Layers,
+  Moon,
+  RefreshCw,
+  X,
+} from 'lucide-react'
 import { DeviceSelect } from '@/components/DeviceSelect'
-import { capturePaneScreenshot } from '@/lib/screenshot'
+import { ScreenshotMenu } from '@/components/ScreenshotMenu'
+import { getWebview, safeReload } from '@/lib/webviewRegistry'
+import { relockPane } from '@/lib/webviewSize'
 import type { Pane } from '@/store/appState'
 import { useAppStore } from '@/store/useAppStore'
 
@@ -32,26 +41,6 @@ export function PaneToolbar({ pane, width }: PaneToolbarProps) {
     return () => window.clearTimeout(timer)
   }, [state.statusMessage, setStatusMessage])
 
-  const onScreenshot = async () => {
-    setFocusedPane(pane.id)
-    try {
-      const result = await capturePaneScreenshot(pane.id)
-      if (result.canceled) {
-        setStatusMessage('Screenshot canceled')
-        return
-      }
-      if (!result.ok) {
-        setStatusMessage(result.error || 'Screenshot failed')
-        return
-      }
-      setStatusMessage(`Saved ${result.path}`)
-    } catch (error) {
-      setStatusMessage(
-        error instanceof Error ? error.message : 'Screenshot failed',
-      )
-    }
-  }
-
   const onPickOverlay = (file: File | null) => {
     if (!file) return
     const reader = new FileReader()
@@ -70,27 +59,41 @@ export function PaneToolbar({ pane, width }: PaneToolbarProps) {
         <button
           type="button"
           className="pane-icon-btn"
-          title="Rotar"
-          aria-label="Rotar"
+          title="Recargar"
+          aria-label="Recargar"
+          onClick={(event) => {
+            event.stopPropagation()
+            setFocusedPane(pane.id)
+            const webview = getWebview(pane.id)
+            if (!webview) {
+              setStatusMessage('Panel no listo')
+              return
+            }
+            safeReload(webview)
+            window.setTimeout(() => relockPane(pane.id), 50)
+            window.setTimeout(() => relockPane(pane.id), 300)
+          }}
+        >
+          <RefreshCw size={18} strokeWidth={1.75} />
+        </button>
+        <button
+          type="button"
+          className="pane-icon-btn"
+          title="Rotar (intercambiar ancho ↔ alto)"
+          aria-label="Rotar dispositivo"
           onClick={(event) => {
             event.stopPropagation()
             rotatePane(pane.id)
           }}
         >
-          <RotateCw size={18} strokeWidth={1.75} />
+          <ArrowLeftRight size={18} strokeWidth={1.75} />
         </button>
-        <button
-          type="button"
-          className="pane-icon-btn"
-          title="Captura"
-          aria-label="Captura"
-          onClick={(event) => {
-            event.stopPropagation()
-            void onScreenshot()
-          }}
-        >
-          <Camera size={18} strokeWidth={1.75} />
-        </button>
+        <ScreenshotMenu
+          variant="pane"
+          paneId={pane.id}
+          width={pane.width}
+          height={pane.height}
+        />
       </div>
 
       <span className="pane-icon-sep" aria-hidden />

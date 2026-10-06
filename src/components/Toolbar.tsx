@@ -2,7 +2,6 @@ import { type FormEvent } from 'react'
 import {
   ArrowLeft,
   ArrowRight,
-  Camera,
   Code2,
   Columns2,
   Focus,
@@ -16,11 +15,17 @@ import {
   User,
 } from 'lucide-react'
 import { getAddPaneGroups } from '@/data/devicePresets'
-import { forEachWebview, getAllWebviews } from '@/lib/webviewRegistry'
+import {
+  forEachWebview,
+  safeGoBack,
+  safeGoForward,
+  safeReload,
+} from '@/lib/webviewRegistry'
+import { relockAllPanes } from '@/lib/webviewSize'
 import { formatZoomLabel } from '@/lib/zoom'
-import { capturePaneScreenshot } from '@/lib/screenshot'
 import type { LayoutMode } from '@/store/appState'
 import { useAppStore } from '@/store/useAppStore'
+import { ScreenshotMenu } from '@/components/ScreenshotMenu'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,26 +53,29 @@ export function Toolbar() {
     setSyncScroll,
     setSidePanel,
     addPane,
-    setStatusMessage,
     setFocusedPane,
   } = useAppStore()
 
   const goBack = () => {
     forEachWebview((_id, webview) => {
-      if (webview.canGoBack()) webview.goBack()
+      safeGoBack(webview)
     })
   }
 
   const goForward = () => {
     forEachWebview((_id, webview) => {
-      if (webview.canGoForward()) webview.goForward()
+      safeGoForward(webview)
     })
   }
 
   const reload = () => {
     forEachWebview((_id, webview) => {
-      webview.reload()
+      safeReload(webview)
     })
+    // Re-lock device sizes after Chromium resets guest metrics on reload.
+    window.setTimeout(() => relockAllPanes(), 50)
+    window.setTimeout(() => relockAllPanes(), 250)
+    window.setTimeout(() => relockAllPanes(), 700)
   }
 
   const onSubmit = (event: FormEvent) => {
@@ -75,31 +83,12 @@ export function Toolbar() {
     navigate()
   }
 
-  const onGlobalScreenshot = async () => {
-    const paneId = state.focusedPaneId ?? state.panes[0]?.id
-    if (!paneId) return
-    setFocusedPane(paneId)
-    try {
-      const result = await capturePaneScreenshot(paneId)
-      if (result.canceled) {
-        setStatusMessage('Screenshot canceled')
-        return
-      }
-      if (!result.ok) {
-        setStatusMessage(result.error || 'Screenshot failed')
-        return
-      }
-      setStatusMessage(`Saved ${result.path}`)
-    } catch (error) {
-      setStatusMessage(
-        error instanceof Error ? error.message : 'Screenshot failed',
-      )
-    }
-  }
-
-  const canNav = getAllWebviews().length > 0
+  const canNav = state.panes.length > 0
   const zoomPct = Math.round(state.zoomMode * 100)
   const addGroups = getAddPaneGroups()
+  const focusedPane =
+    state.panes.find((pane) => pane.id === state.focusedPaneId) ??
+    state.panes[0]
 
   return (
     <header className="topbar">
@@ -204,15 +193,14 @@ export function Toolbar() {
             <Link2 size={16} strokeWidth={1.75} />
           </button>
 
-          <button
-            type="button"
-            className="topbar-icon"
-            title="Captura"
-            aria-label="Captura"
-            onClick={() => void onGlobalScreenshot()}
-          >
-            <Camera size={16} strokeWidth={1.75} />
-          </button>
+          {focusedPane && (
+            <ScreenshotMenu
+              variant="topbar"
+              paneId={focusedPane.id}
+              width={focusedPane.width}
+              height={focusedPane.height}
+            />
+          )}
 
           <button
             type="button"
