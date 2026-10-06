@@ -114,11 +114,11 @@ export function Pane({ pane, compact = false }: PaneProps) {
       void safeExecuteJavaScript(
         webview,
         `(() => {
-          let el = document.getElementById('prixelgrid-dark');
+          let el = document.getElementById('pixelgrid-dark');
           if (${pane.darkMode ? 'true' : 'false'}) {
             if (!el) {
               el = document.createElement('style');
-              el.id = 'prixelgrid-dark';
+              el.id = 'pixelgrid-dark';
               document.documentElement.appendChild(el);
             }
             el.textContent = ${JSON.stringify(DARK_CSS)};
@@ -196,10 +196,10 @@ export function Pane({ pane, compact = false }: PaneProps) {
       const message = typeof event.message === 'string' ? event.message : ''
       const tools = toolStateRef.current
 
-      if (message.startsWith('__PRIXELGRID_COLOR__')) {
+      if (message.startsWith('__PIXELGRID_COLOR__')) {
         try {
           const payload = JSON.parse(
-            message.replace('__PRIXELGRID_COLOR__', ''),
+            message.replace('__PIXELGRID_COLOR__', ''),
           ) as { color: string }
           if (payload.color) setPaneColor(pane.id, payload.color)
         } catch {
@@ -208,11 +208,11 @@ export function Pane({ pane, compact = false }: PaneProps) {
         return
       }
 
-      if (message.startsWith('__PRIXELGRID_INSPECT__')) {
+      if (message.startsWith('__PIXELGRID_INSPECT__')) {
         if (tools.activeTool !== 'inspect') return
         try {
           const info = JSON.parse(
-            message.replace('__PRIXELGRID_INSPECT__', ''),
+            message.replace('__PIXELGRID_INSPECT__', ''),
           ) as InspectPayload
           setInspectInfo(info)
           setFocusedPane(pane.id)
@@ -223,13 +223,13 @@ export function Pane({ pane, compact = false }: PaneProps) {
       }
 
       if (!tools.syncEnabled) return
-      if (!message.startsWith('__PRIXELGRID__')) return
+      if (!message.startsWith('__PIXELGRID__')) return
       try {
-        const payload = JSON.parse(message.replace('__PRIXELGRID__', '')) as {
+        const payload = JSON.parse(message.replace('__PIXELGRID__', '')) as {
           channel: string
           payload: Record<string, number | string>
         }
-        if (payload.channel === 'prixelgrid-scroll' && tools.syncScroll) {
+        if (payload.channel === 'pixelgrid-scroll' && tools.syncScroll) {
           forEachWebview((_id, other) => {
             void safeExecuteJavaScript(
               other,
@@ -240,7 +240,7 @@ export function Pane({ pane, compact = false }: PaneProps) {
             )
           }, pane.id)
         }
-        if (payload.channel === 'prixelgrid-pointer' && tools.syncClick) {
+        if (payload.channel === 'pixelgrid-pointer' && tools.syncClick) {
           forEachWebview((_id, other) => {
             void safeExecuteJavaScript(
               other,
@@ -331,11 +331,11 @@ export function Pane({ pane, compact = false }: PaneProps) {
     void safeExecuteJavaScript(
       webview,
       `(() => {
-        let el = document.getElementById('prixelgrid-dark');
+        let el = document.getElementById('pixelgrid-dark');
         if (${pane.darkMode ? 'true' : 'false'}) {
           if (!el) {
             el = document.createElement('style');
-            el.id = 'prixelgrid-dark';
+            el.id = 'pixelgrid-dark';
             document.documentElement.appendChild(el);
           }
           el.textContent = ${JSON.stringify(DARK_CSS)};

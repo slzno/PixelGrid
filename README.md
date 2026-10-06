@@ -1,4 +1,4 @@
-# PrixelGrid
+# PixelGrid
 
 Navegador multipanel para previsualizar y probar sitios web en varios dispositivos a la vez.
 
@@ -43,8 +43,8 @@ Los artefactos quedan en `release/<versión>/`.
 
 | Campo | Valor |
 | --- | --- |
-| Producto | PrixelGrid |
-| App ID | `com.pagorium.prixelgrid` |
+| Producto | PixelGrid |
+| App ID | `com.pagorium.pixelgrid` |
 | Autor | Pagorium Technologies |
 | Sitio | https://pagorium.com |
 | Contacto | hello@pagorium.com |
@@ -54,7 +54,7 @@ Los artefactos quedan en `release/<versión>/`.
 - `build/icon.png` — maestro 1024×1024
 - `build/icon.icns` — macOS
 - `build/icon.ico` — Windows
-- `public/prixelgrid.svg` / `public/icons/*` — favicon y web
+- `public/pixelgrid.svg` / `public/icons/*` — favicon y web
 
 ## Licencia
 

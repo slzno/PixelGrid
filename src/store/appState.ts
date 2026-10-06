@@ -59,7 +59,7 @@ export type AppState = {
   showMockups: boolean
 }
 
-export const STORAGE_KEY = 'prixelgrid-state-v13'
+export const STORAGE_KEY = 'pixelgrid-state-v14'
 export const DEFAULT_URL = 'https://pagorium.com/'
 export const TOPBAR_HEIGHT = 36
 

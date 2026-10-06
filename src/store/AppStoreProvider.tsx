@@ -73,13 +73,13 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     state.showMockups,
   ])
 
-  // Theme only for PrixelGrid chrome (topbar, workspace, menus) — not guest pages.
+  // Theme only for PixelGrid chrome (topbar, workspace, menus) — not guest pages.
   useEffect(() => {
     const root = document.documentElement
     root.dataset.theme = state.uiTheme
     root.style.colorScheme = state.uiTheme
     void window.ipcRenderer
-      ?.invoke?.('prixelgrid:set-ui-theme', { theme: state.uiTheme })
+      ?.invoke?.('pixelgrid:set-ui-theme', { theme: state.uiTheme })
       .catch(() => undefined)
   }, [state.uiTheme])
 

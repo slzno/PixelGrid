@@ -58,7 +58,7 @@ export async function clearWebviewEmulation(webview: WebviewEl) {
   try {
     const webContentsId = webview.getWebContentsId?.()
     if (typeof webContentsId !== 'number') return
-    await window.ipcRenderer.invoke('prixelgrid:clear-emulation', {
+    await window.ipcRenderer.invoke('pixelgrid:clear-emulation', {
       webContentsId,
     })
   } catch {

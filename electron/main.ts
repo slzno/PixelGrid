@@ -37,7 +37,7 @@ function resolveAppIcon() {
   const candidates = [
     path.join(process.env.APP_ROOT ?? '', 'build', 'icon.png'),
     path.join(process.env.VITE_PUBLIC ?? '', 'icons', 'icon.png'),
-    path.join(process.env.VITE_PUBLIC ?? '', 'prixelgrid.svg'),
+    path.join(process.env.VITE_PUBLIC ?? '', 'pixelgrid.svg'),
   ]
   for (const candidate of candidates) {
     if (candidate && existsSync(candidate)) return candidate
@@ -48,7 +48,7 @@ function resolveAppIcon() {
 function createWindow() {
   const icon = resolveAppIcon()
   win = new BrowserWindow({
-    title: 'PrixelGrid',
+    title: 'PixelGrid',
     width: 1440,
     height: 900,
     minWidth: 900,
@@ -208,7 +208,7 @@ async function captureViewportAtScale(
 }
 
 ipcMain.handle(
-  'prixelgrid:set-ui-theme',
+  'pixelgrid:set-ui-theme',
   async (_event, payload: { theme: 'dark' | 'light' }) => {
     if (!win || win.isDestroyed()) return { ok: false }
     const backgroundColor = payload.theme === 'light' ? '#eef0f3' : '#1e1f22'
@@ -218,7 +218,7 @@ ipcMain.handle(
 )
 
 ipcMain.handle(
-  'prixelgrid:clear-emulation',
+  'pixelgrid:clear-emulation',
   async (_event, payload: { webContentsId: number }) => {
     try {
       const wc = webContents.fromId(payload.webContentsId)
@@ -236,7 +236,7 @@ ipcMain.handle(
 )
 
 ipcMain.handle(
-  'prixelgrid:devtools-show',
+  'pixelgrid:devtools-show',
   async (
     _event,
     payload: { guestWebContentsId: number; bounds: Bounds },
@@ -292,7 +292,7 @@ ipcMain.handle(
 )
 
 ipcMain.handle(
-  'prixelgrid:devtools-layout',
+  'pixelgrid:devtools-layout',
   async (_event, payload: { bounds: Bounds }) => {
     try {
       if (!devtoolsView) return { ok: false }
@@ -310,7 +310,7 @@ ipcMain.handle(
   },
 )
 
-ipcMain.handle('prixelgrid:devtools-hide', async () => {
+ipcMain.handle('pixelgrid:devtools-hide', async () => {
   try {
     hideDevToolsView()
     return { ok: true }
@@ -338,7 +338,7 @@ const SCREENSHOT_LONG_EDGE: Record<string, number> = {
  * instead of soft-upscaling a tiny bitmap.
  */
 ipcMain.handle(
-  'prixelgrid:capture-screenshot',
+  'pixelgrid:capture-screenshot',
   async (
     _event,
     payload: {
@@ -426,7 +426,7 @@ ipcMain.handle(
 
       const result = await dialog.showSaveDialog(win, {
         title: `Guardar captura (${label})`,
-        defaultPath: `prixelgrid-${label}-${outW}x${outH}-${Date.now()}.png`,
+        defaultPath: `pixelgrid-${label}-${outW}x${outH}-${Date.now()}.png`,
         filters: [{ name: 'PNG', extensions: ['png'] }],
       })
       if (result.canceled || !result.filePath) {

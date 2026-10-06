@@ -1,9 +1,9 @@
 {
-  "name": "prixelgrid",
+  "name": "pixelgrid",
   "private": true,
   "version": "0.1.0",
   "description": "Navegador multipanel para previsualizar y probar sitios web en múltiples dispositivos. Creado por Pagorium Technologies.",
-  "productName": "PrixelGrid",
+  "productName": "PixelGrid",
   "author": {
     "name": "Pagorium Technologies",
     "email": "hello@pagorium.com",
@@ -24,10 +24,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/pagorium/prixelgrid.git"
+    "url": "https://github.com/pagorium/pixelgrid.git"
   },
   "keywords": [
-    "prixelgrid",
+    "pixelgrid",
     "responsive",
     "multipane",
     "browser",

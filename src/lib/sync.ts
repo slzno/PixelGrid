@@ -14,29 +14,29 @@ export type SyncPointerPayload = {
 // Guest pages communicate via console-message events on <webview>.
 const SCROLL_SCRIPT = `
 (() => {
-  if (window.__prixelgridSyncInstalled) return;
-  window.__prixelgridSyncInstalled = true;
-  window.__prixelgridIsSyncing = false;
+  if (window.__pixelgridSyncInstalled) return;
+  window.__pixelgridSyncInstalled = true;
+  window.__pixelgridIsSyncing = false;
 
   const post = (channel, payload) => {
     try {
-      console.log('__PRIXELGRID__' + JSON.stringify({ channel, payload }));
+      console.log('__PIXELGRID__' + JSON.stringify({ channel, payload }));
     } catch (_) {}
   };
 
   window.addEventListener('scroll', () => {
-    if (window.__prixelgridIsSyncing) return;
+    if (window.__pixelgridIsSyncing) return;
     const maxX = Math.max(document.documentElement.scrollWidth - window.innerWidth, 1);
     const maxY = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
-    post('prixelgrid-scroll', {
+    post('pixelgrid-scroll', {
       ratioX: window.scrollX / maxX,
       ratioY: window.scrollY / maxY,
     });
   }, { passive: true });
 
   window.addEventListener('click', (event) => {
-    if (window.__prixelgridIsSyncing) return;
-    post('prixelgrid-pointer', {
+    if (window.__pixelgridIsSyncing) return;
+    post('pixelgrid-pointer', {
       type: 'click',
       ratioX: event.clientX / Math.max(window.innerWidth, 1),
       ratioY: event.clientY / Math.max(window.innerHeight, 1),
@@ -44,27 +44,27 @@ const SCROLL_SCRIPT = `
   }, true);
 
   window.addEventListener('mousemove', (event) => {
-    if (window.__prixelgridIsSyncing) return;
+    if (window.__pixelgridIsSyncing) return;
     if (!event.metaKey && !event.ctrlKey) return;
-    post('prixelgrid-pointer', {
+    post('pixelgrid-pointer', {
       type: 'mousemove',
       ratioX: event.clientX / Math.max(window.innerWidth, 1),
       ratioY: event.clientY / Math.max(window.innerHeight, 1),
     });
   }, { passive: true });
 
-  window.__prixelgridApplyScroll = (ratioX, ratioY) => {
-    window.__prixelgridIsSyncing = true;
+  window.__pixelgridApplyScroll = (ratioX, ratioY) => {
+    window.__pixelgridIsSyncing = true;
     const maxX = Math.max(document.documentElement.scrollWidth - window.innerWidth, 0);
     const maxY = Math.max(document.documentElement.scrollHeight - window.innerHeight, 0);
     window.scrollTo(maxX * ratioX, maxY * ratioY);
     requestAnimationFrame(() => {
-      window.__prixelgridIsSyncing = false;
+      window.__pixelgridIsSyncing = false;
     });
   };
 
-  window.__prixelgridApplyPointer = (type, ratioX, ratioY) => {
-    window.__prixelgridIsSyncing = true;
+  window.__pixelgridApplyPointer = (type, ratioX, ratioY) => {
+    window.__pixelgridIsSyncing = true;
     const x = Math.max(0, Math.min(window.innerWidth - 1, ratioX * window.innerWidth));
     const y = Math.max(0, Math.min(window.innerHeight - 1, ratioY * window.innerHeight));
     const target = document.elementFromPoint(x, y) || document.body;
@@ -81,7 +81,7 @@ const SCROLL_SCRIPT = `
       target.dispatchEvent(new MouseEvent('mousemove', eventInit));
     }
     requestAnimationFrame(() => {
-      window.__prixelgridIsSyncing = false;
+      window.__pixelgridIsSyncing = false;
     });
   };
 })();
@@ -92,7 +92,7 @@ export function getSyncInstallScript() {
 }
 
 export function getApplyScrollScript(ratioX: number, ratioY: number) {
-  return `window.__prixelgridApplyScroll && window.__prixelgridApplyScroll(${ratioX}, ${ratioY});`
+  return `window.__pixelgridApplyScroll && window.__pixelgridApplyScroll(${ratioX}, ${ratioY});`
 }
 
 export function getApplyPointerScript(
@@ -100,5 +100,5 @@ export function getApplyPointerScript(
   ratioX: number,
   ratioY: number,
 ) {
-  return `window.__prixelgridApplyPointer && window.__prixelgridApplyPointer(${JSON.stringify(type)}, ${ratioX}, ${ratioY});`
+  return `window.__pixelgridApplyPointer && window.__pixelgridApplyPointer(${JSON.stringify(type)}, ${ratioX}, ${ratioY});`
 }

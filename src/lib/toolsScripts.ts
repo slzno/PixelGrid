@@ -12,15 +12,15 @@ export type InspectPayload = {
 export function getInspectInstallScript() {
   return `
 (() => {
-  if (window.__prixelgridInspectInstalled) {
-    window.__prixelgridInspectEnabled = true;
+  if (window.__pixelgridInspectInstalled) {
+    window.__pixelgridInspectEnabled = true;
     return;
   }
-  window.__prixelgridInspectInstalled = true;
-  window.__prixelgridInspectEnabled = true;
+  window.__pixelgridInspectInstalled = true;
+  window.__pixelgridInspectEnabled = true;
 
   const highlight = document.createElement('div');
-  highlight.id = '__prixelgrid-inspect-hl';
+  highlight.id = '__pixelgrid-inspect-hl';
   Object.assign(highlight.style, {
     position: 'fixed',
     pointerEvents: 'none',
@@ -32,7 +32,7 @@ export function getInspectInstallScript() {
   document.documentElement.appendChild(highlight);
 
   const label = document.createElement('div');
-  label.id = '__prixelgrid-inspect-label';
+  label.id = '__pixelgrid-inspect-label';
   Object.assign(label.style, {
     position: 'fixed',
     pointerEvents: 'none',
@@ -63,7 +63,7 @@ export function getInspectInstallScript() {
   };
 
   const onMove = (event) => {
-    if (!window.__prixelgridInspectEnabled) return;
+    if (!window.__pixelgridInspectEnabled) return;
     const el = document.elementFromPoint(event.clientX, event.clientY);
     if (!el || el === highlight || el === label) return;
     const rect = el.getBoundingClientRect();
@@ -84,19 +84,19 @@ export function getInspectInstallScript() {
   };
 
   const onClick = (event) => {
-    if (!window.__prixelgridInspectEnabled) return;
+    if (!window.__pixelgridInspectEnabled) return;
     event.preventDefault();
     event.stopPropagation();
     const el = document.elementFromPoint(event.clientX, event.clientY);
     if (!el || el === highlight || el === label) return;
-    console.log('__PRIXELGRID_INSPECT__' + JSON.stringify(describe(el)));
+    console.log('__PIXELGRID_INSPECT__' + JSON.stringify(describe(el)));
   };
 
   window.addEventListener('mousemove', onMove, true);
   window.addEventListener('click', onClick, true);
 
-  window.__prixelgridSetInspect = (enabled) => {
-    window.__prixelgridInspectEnabled = !!enabled;
+  window.__pixelgridSetInspect = (enabled) => {
+    window.__pixelgridInspectEnabled = !!enabled;
     if (!enabled) {
       highlight.style.display = 'none';
       label.style.display = 'none';
@@ -109,14 +109,14 @@ export function getInspectInstallScript() {
 export function getInspectEnableScript(enabled: boolean) {
   return `
 ${getInspectInstallScript()}
-window.__prixelgridSetInspect && window.__prixelgridSetInspect(${enabled ? 'true' : 'false'});
+window.__pixelgridSetInspect && window.__pixelgridSetInspect(${enabled ? 'true' : 'false'});
 `
 }
 
 export function getDesignOverlayScript(enabled: boolean, gridSize: number) {
   return `
 (() => {
-  const id = '__prixelgrid-design-grid';
+  const id = '__pixelgrid-design-grid';
   const existing = document.getElementById(id);
   if (!${enabled}) {
     if (existing) existing.remove();
@@ -146,7 +146,7 @@ export function getEyedropperScript() {
   try {
     if (window.EyeDropper) {
       const result = await new EyeDropper().open();
-      console.log('__PRIXELGRID_COLOR__' + JSON.stringify({ color: result.sRGBHex }));
+      console.log('__PIXELGRID_COLOR__' + JSON.stringify({ color: result.sRGBHex }));
       return result.sRGBHex;
     }
     return null;

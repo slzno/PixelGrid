@@ -1,8 +1,8 @@
 // @see https://www.electron.build/configuration/configuration
 {
   "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
-  "appId": "com.pagorium.prixelgrid",
-  "productName": "PrixelGrid",
+  "appId": "com.pagorium.pixelgrid",
+  "productName": "PixelGrid",
   "copyright": "Copyright © Pagorium Technologies",
   "asar": true,
   "directories": {
@@ -14,7 +14,7 @@
     "dist-electron"
   ],
   "extraMetadata": {
-    "name": "prixelgrid",
+    "name": "pixelgrid",
     "author": {
       "name": "Pagorium Technologies",
       "email": "hello@pagorium.com",
@@ -75,8 +75,8 @@
     "installerHeaderIcon": "build/icon.ico",
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,
-    "shortcutName": "PrixelGrid",
-    "uninstallDisplayName": "PrixelGrid",
+    "shortcutName": "PixelGrid",
+    "uninstallDisplayName": "PixelGrid",
     "license": "LICENSE"
   },
   "linux": {
@@ -85,12 +85,12 @@
     "maintainer": "Pagorium Technologies <hello@pagorium.com>",
     "vendor": "Pagorium Technologies",
     "synopsis": "Navegador multipanel para previsualizar sitios en varios dispositivos",
-    "description": "PrixelGrid es una herramienta de Pagorium Technologies para diseñar y probar interfaces responsive en múltiples viewports a la vez.",
+    "description": "PixelGrid es una herramienta de Pagorium Technologies para diseñar y probar interfaces responsive en múltiples viewports a la vez.",
     "desktop": {
-      "Name": "PrixelGrid",
+      "Name": "PixelGrid",
       "Comment": "Previsualización multipanel por Pagorium Technologies",
       "Categories": "Development;WebDevelopment;",
-      "StartupWMClass": "PrixelGrid"
+      "StartupWMClass": "PixelGrid"
     },
     "target": [
       "AppImage",
@@ -102,7 +102,7 @@
     {
       "provider": "github",
       "owner": "pagorium",
-      "repo": "prixelgrid",
+      "repo": "pixelgrid",
       "releaseType": "release"
     }
   ]
