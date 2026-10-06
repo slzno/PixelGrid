@@ -13,6 +13,7 @@ import {
   STORAGE_KEY,
   type Pane,
   type PaneTool,
+  type UiTheme,
   type ZoomMode,
 } from './appState'
 import { AppStoreContext, type AppStoreValue } from './AppStoreContext'
@@ -54,6 +55,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       syncClick: state.syncClick,
       focusedPaneId: state.focusedPaneId,
       designGridSize: state.designGridSize,
+      uiTheme: state.uiTheme,
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
   }, [
@@ -66,7 +68,18 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     state.syncClick,
     state.focusedPaneId,
     state.designGridSize,
+    state.uiTheme,
   ])
+
+  // Theme only for Pixelgrid chrome (topbar, workspace, menus) — not guest pages.
+  useEffect(() => {
+    const root = document.documentElement
+    root.dataset.theme = state.uiTheme
+    root.style.colorScheme = state.uiTheme
+    void window.ipcRenderer
+      ?.invoke?.('pixelgrid:set-ui-theme', { theme: state.uiTheme })
+      .catch(() => undefined)
+  }, [state.uiTheme])
 
   const setDraftUrl = useCallback((draftUrl: string) => {
     dispatch({ type: 'SET_DRAFT_URL', draftUrl })
@@ -204,6 +217,17 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'SET_STATUS_MESSAGE', statusMessage })
   }, [])
 
+  const setUiTheme = useCallback((uiTheme: UiTheme) => {
+    dispatch({ type: 'SET_UI_THEME', uiTheme })
+  }, [])
+
+  const toggleUiTheme = useCallback(() => {
+    dispatch({
+      type: 'SET_UI_THEME',
+      uiTheme: state.uiTheme === 'dark' ? 'light' : 'dark',
+    })
+  }, [state.uiTheme])
+
   const value = useMemo(
     () => ({
       state,
@@ -234,6 +258,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       setInspectInfo,
       setStatusMessage,
       setSidePanel,
+      setUiTheme,
+      toggleUiTheme,
     }),
     [
       state,
@@ -264,6 +290,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       setInspectInfo,
       setStatusMessage,
       setSidePanel,
+      setUiTheme,
+      toggleUiTheme,
     ],
   )
 

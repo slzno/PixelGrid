@@ -15,8 +15,9 @@ function Workspace() {
 }
 
 function AppShell() {
+  const { state } = useAppStore()
   return (
-    <div className="app">
+    <div className={`app theme-${state.uiTheme}`} data-theme={state.uiTheme}>
       <Toolbar />
       <Workspace />
       <StatusToast />

@@ -8,6 +8,9 @@ import { clampZoom } from '../lib/zoom'
 
 export type LayoutMode = 'horizontal' | 'vertical' | 'focus'
 
+/** Chrome UI theme (not the per-pane page dark emulation). */
+export type UiTheme = 'dark' | 'light'
+
 /** Global zoom factor (25%–100%). Guest viewport stays at real CSS px. */
 export type ZoomMode = number
 
@@ -51,11 +54,16 @@ export type AppState = {
   inspectInfo: InspectPayload | null
   statusMessage: string | null
   sidePanelOpen: boolean
+  uiTheme: UiTheme
 }
 
-export const STORAGE_KEY = 'pixelgrid-state-v10'
+export const STORAGE_KEY = 'pixelgrid-state-v11'
 export const DEFAULT_URL = 'https://pagorium.com/'
 export const TOPBAR_HEIGHT = 36
+
+export function normalizeUiTheme(value: unknown): UiTheme {
+  return value === 'light' ? 'light' : 'dark'
+}
 
 function createId() {
   return `pane-${Math.random().toString(36).slice(2, 9)}`
@@ -123,6 +131,7 @@ export function createDefaultState(): AppState {
     inspectInfo: null,
     statusMessage: null,
     sidePanelOpen: false,
+    uiTheme: 'dark',
   }
 }
 
@@ -188,6 +197,7 @@ export type Action =
   | { type: 'SET_INSPECT_INFO'; inspectInfo: InspectPayload | null }
   | { type: 'SET_STATUS_MESSAGE'; statusMessage: string | null }
   | { type: 'SET_SIDE_PANEL'; sidePanelOpen: boolean }
+  | { type: 'SET_UI_THEME'; uiTheme: UiTheme }
   | { type: 'HYDRATE'; state: Partial<AppState> }
 
 export function reducer(state: AppState, action: Action): AppState {
@@ -351,6 +361,8 @@ export function reducer(state: AppState, action: Action): AppState {
       return { ...state, statusMessage: action.statusMessage }
     case 'SET_SIDE_PANEL':
       return { ...state, sidePanelOpen: action.sidePanelOpen }
+    case 'SET_UI_THEME':
+      return { ...state, uiTheme: normalizeUiTheme(action.uiTheme) }
     case 'HYDRATE':
       return {
         ...state,
@@ -360,6 +372,10 @@ export function reducer(state: AppState, action: Action): AppState {
           typeof action.state.zoomMode === 'number'
             ? clampZoom(action.state.zoomMode)
             : state.zoomMode,
+        uiTheme:
+          action.state.uiTheme !== undefined
+            ? normalizeUiTheme(action.state.uiTheme)
+            : state.uiTheme,
       }
     default:
       return state
@@ -407,6 +423,10 @@ export function loadPersistedState(): Partial<AppState> | null {
       sidePanelOpen:
         typeof parsed.sidePanelOpen === 'boolean'
           ? parsed.sidePanelOpen
+          : undefined,
+      uiTheme:
+        parsed.uiTheme === 'light' || parsed.uiTheme === 'dark'
+          ? parsed.uiTheme
           : undefined,
     }
   } catch {

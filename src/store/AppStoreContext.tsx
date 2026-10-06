@@ -1,6 +1,13 @@
 import { createContext, useContext } from 'react'
 import type { InspectPayload } from '../lib/toolsScripts'
-import type { AppState, LayoutMode, Pane, PaneTool, ZoomMode } from './appState'
+import type {
+  AppState,
+  LayoutMode,
+  Pane,
+  PaneTool,
+  UiTheme,
+  ZoomMode,
+} from './appState'
 
 export type AppStoreValue = {
   state: AppState
@@ -40,6 +47,8 @@ export type AppStoreValue = {
   setInspectInfo: (inspectInfo: InspectPayload | null) => void
   setStatusMessage: (statusMessage: string | null) => void
   setSidePanel: (open: boolean) => void
+  setUiTheme: (uiTheme: UiTheme) => void
+  toggleUiTheme: () => void
 }
 
 export const AppStoreContext = createContext<AppStoreValue | null>(null)

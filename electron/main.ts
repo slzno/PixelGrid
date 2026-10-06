@@ -187,6 +187,16 @@ async function captureViewportAtScale(
 }
 
 ipcMain.handle(
+  'pixelgrid:set-ui-theme',
+  async (_event, payload: { theme: 'dark' | 'light' }) => {
+    if (!win || win.isDestroyed()) return { ok: false }
+    const backgroundColor = payload.theme === 'light' ? '#eef0f3' : '#1e1f22'
+    win.setBackgroundColor(backgroundColor)
+    return { ok: true }
+  },
+)
+
+ipcMain.handle(
   'pixelgrid:clear-emulation',
   async (_event, payload: { webContentsId: number }) => {
     try {

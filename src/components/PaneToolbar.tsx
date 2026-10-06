@@ -79,8 +79,8 @@ export function PaneToolbar({ pane, width }: PaneToolbarProps) {
         <button
           type="button"
           className={`pane-icon-btn${pane.darkMode ? ' active' : ''}`}
-          title="Emular modo oscuro"
-          aria-label="Emular modo oscuro"
+          title="Emular modo oscuro de la página"
+          aria-label="Emular modo oscuro de la página"
           onClick={(event) => {
             event.stopPropagation()
             togglePaneDark(pane.id)

@@ -7,11 +7,13 @@ import {
   Focus,
   LayoutPanelLeft,
   Link2,
+  Moon,
   Plus,
   Puzzle,
   RefreshCw,
   Rows2,
   Settings,
+  Sun,
   User,
 } from 'lucide-react'
 import { getAddPaneGroups } from '@/data/devicePresets'
@@ -54,6 +56,7 @@ export function Toolbar() {
     setSidePanel,
     addPane,
     setFocusedPane,
+    toggleUiTheme,
   } = useAppStore()
 
   const goBack = () => {
@@ -242,6 +245,27 @@ export function Toolbar() {
           <span className="zoom-label">{formatZoomLabel(state.zoomMode)}</span>
         </div>
 
+        <button
+          type="button"
+          className="topbar-icon"
+          title={
+            state.uiTheme === 'dark'
+              ? 'Tema de la app: claro'
+              : 'Tema de la app: oscuro'
+          }
+          aria-label={
+            state.uiTheme === 'dark'
+              ? 'Tema de la app: claro'
+              : 'Tema de la app: oscuro'
+          }
+          onClick={toggleUiTheme}
+        >
+          {state.uiTheme === 'dark' ? (
+            <Sun size={16} strokeWidth={1.75} />
+          ) : (
+            <Moon size={16} strokeWidth={1.75} />
+          )}
+        </button>
         <button
           type="button"
           className="topbar-icon"
