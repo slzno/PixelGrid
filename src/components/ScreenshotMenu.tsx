@@ -21,8 +21,6 @@ import { cn } from '@/lib/utils'
 
 type ScreenshotMenuProps = {
   paneId: string
-  width: number
-  height: number
   /** Visual style: topbar icon or pane toolbar icon. */
   variant?: 'topbar' | 'pane'
   className?: string
@@ -30,8 +28,6 @@ type ScreenshotMenuProps = {
 
 export function ScreenshotMenu({
   paneId,
-  width,
-  height,
   variant = 'pane',
   className,
 }: ScreenshotMenuProps) {
@@ -46,11 +42,13 @@ export function ScreenshotMenu({
     setStoredScreenshotQuality(nextQuality)
     setFocusedPane(paneId)
     setBusy(true)
-    setStatusMessage(`Capturando ${nextQuality.toUpperCase()}…`)
+    setStatusMessage(
+      nextQuality === 'native'
+        ? 'Capturando viewport…'
+        : `Capturando viewport → ${nextQuality.toUpperCase()}…`,
+    )
     try {
       const result = await capturePaneScreenshot(paneId, {
-        width,
-        height,
         quality: nextQuality,
       })
       if (result.canceled) {
@@ -101,7 +99,7 @@ export function ScreenshotMenu({
         className="w-52"
         onClick={(event) => event.stopPropagation()}
       >
-        <DropdownMenuLabel>Calidad de captura</DropdownMenuLabel>
+        <DropdownMenuLabel>Captura del viewport</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {SCREENSHOT_QUALITIES.map((option) => (
           <DropdownMenuItem

@@ -5,7 +5,6 @@ import {
   dialog,
   ipcMain,
   webContents,
-  type NativeImage,
   type WebContents,
 } from 'electron'
 import { fileURLToPath } from 'node:url'
@@ -110,10 +109,6 @@ function clearDeviceEmulation(wc: WebContents) {
   }
 }
 
-function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
-
 ipcMain.handle(
   'pixelgrid:clear-emulation',
   async (_event, payload: { webContentsId: number }) => {
@@ -208,96 +203,29 @@ ipcMain.handle('pixelgrid:devtools-hide', async () => {
 })
 
 const SCREENSHOT_LONG_EDGE: Record<string, number> = {
+  native: 0, // keep viewport pixels as-is
   '1080p': 1920,
   '2k': 2560,
   '4k': 3840,
 }
 
-async function captureWithCdp(
-  wc: WebContents,
-  cssW: number,
-  cssH: number,
-  scale: number,
-): Promise<Buffer | null> {
-  // DevTools / setDevToolsWebContents often owns the debugger — skip if busy.
-  if (wc.debugger.isAttached()) return null
-
-  try {
-    wc.debugger.attach('1.3')
-    await wc.debugger.sendCommand('Emulation.setDeviceMetricsOverride', {
-      width: cssW,
-      height: cssH,
-      deviceScaleFactor: scale,
-      mobile: cssH >= cssW,
-      scale: 1,
-    })
-    await delay(200)
-    const shot = (await wc.debugger.sendCommand('Page.captureScreenshot', {
-      format: 'png',
-      fromSurface: true,
-      captureBeyondViewport: true,
-    })) as { data: string }
-    return Buffer.from(shot.data, 'base64')
-  } catch {
-    return null
-  } finally {
-    try {
-      await wc.debugger.sendCommand('Emulation.clearDeviceMetricsOverride')
-    } catch {
-      // ignore
-    }
-    try {
-      if (wc.debugger.isAttached()) wc.debugger.detach()
-    } catch {
-      // ignore
-    }
-    clearDeviceEmulation(wc)
-  }
-}
-
-async function captureWithResize(
-  wc: WebContents,
-  _cssW: number,
-  _cssH: number,
-  outW: number,
-  outH: number,
-): Promise<NativeImage> {
-  clearDeviceEmulation(wc)
-  await delay(40)
-  let image = await wc.capturePage()
-  const size = image.getSize()
-  if (size.width !== outW || size.height !== outH) {
-    image = image.resize({
-      width: outW,
-      height: outH,
-      quality: 'best',
-    })
-  }
-  return image
-}
-
+/**
+ * Capture ONLY the visible guest viewport (what the pane shows),
+ * then optionally scale the export to 1080p / 2K / 4K on the long edge.
+ * Never uses full-page or CDP metrics overrides (those broke the shot).
+ */
 ipcMain.handle(
   'pixelgrid:capture-screenshot',
   async (
     _event,
     payload: {
       webContentsId: number
-      width: number
-      height: number
-      quality: '1080p' | '2k' | '4k'
+      quality: 'native' | '1080p' | '2k' | '4k'
     },
   ) => {
-    const cssW = Math.max(1, Math.round(payload.width))
-    const cssH = Math.max(1, Math.round(payload.height))
-    const targetLong = SCREENSHOT_LONG_EDGE[payload.quality] ?? 3840
-    const longEdge = Math.max(cssW, cssH)
-    const scale = Math.max(1, targetLong / longEdge)
-    const outW = Math.round(cssW * scale)
-    const outH = Math.round(cssH * scale)
-
     let wc: WebContents | undefined
-    const hadEmbeddedDevTools =
-      attachedGuestId === payload.webContentsId && devtoolsView !== null
+    let outW = 0
+    let outH = 0
 
     try {
       if (!win) return { ok: false, error: 'No window' }
@@ -306,25 +234,40 @@ ipcMain.handle(
         return { ok: false, error: 'Panel webview no listo' }
       }
 
-      // Embedded DevTools holds the debugger and breaks CDP capture.
-      if (hadEmbeddedDevTools) {
-        hideDevToolsView()
-        await delay(60)
-      }
-
-      // Capture first (so canceling the dialog doesn't leave bad emulation).
-      let png: Buffer | null = await captureWithCdp(wc, cssW, cssH, scale)
-      if (!png) {
-        const image = await captureWithResize(wc, cssW, cssH, outW, outH)
-        png = image.toPNG()
-      }
-
-      // Never leave device emulation on — it shrinks panes after reload.
       clearDeviceEmulation(wc)
 
+      // Visible viewport only — not the full scrollable page.
+      let image = await wc.capturePage()
+      const src = image.getSize()
+      if (src.width < 2 || src.height < 2) {
+        return { ok: false, error: 'Viewport vacío' }
+      }
+
+      const targetLong = SCREENSHOT_LONG_EDGE[payload.quality] ?? 0
+      if (targetLong > 0) {
+        const srcLong = Math.max(src.width, src.height)
+        const scale = targetLong / srcLong
+        outW = Math.max(1, Math.round(src.width * scale))
+        outH = Math.max(1, Math.round(src.height * scale))
+        if (outW !== src.width || outH !== src.height) {
+          image = image.resize({
+            width: outW,
+            height: outH,
+            quality: 'best',
+          })
+        }
+      } else {
+        outW = src.width
+        outH = src.height
+      }
+
+      const png = image.toPNG()
+      const label =
+        payload.quality === 'native' ? 'viewport' : payload.quality
+
       const result = await dialog.showSaveDialog(win, {
-        title: `Save screenshot (${payload.quality.toUpperCase()})`,
-        defaultPath: `pixelgrid-${payload.quality}-${outW}x${outH}-${Date.now()}.png`,
+        title: `Guardar captura (${label})`,
+        defaultPath: `pixelgrid-${label}-${outW}x${outH}-${Date.now()}.png`,
         filters: [{ name: 'PNG', extensions: ['png'] }],
       })
       if (result.canceled || !result.filePath) {

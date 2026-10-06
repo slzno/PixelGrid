@@ -80,9 +80,6 @@ function clearDeviceEmulation(wc) {
   } catch {
   }
 }
-function delay(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 ipcMain.handle(
   "pixelgrid:clear-emulation",
   async (_event, payload) => {
@@ -162,87 +159,52 @@ ipcMain.handle("pixelgrid:devtools-hide", async () => {
   }
 });
 const SCREENSHOT_LONG_EDGE = {
+  native: 0,
+  // keep viewport pixels as-is
   "1080p": 1920,
   "2k": 2560,
   "4k": 3840
 };
-async function captureWithCdp(wc, cssW, cssH, scale) {
-  if (wc.debugger.isAttached()) return null;
-  try {
-    wc.debugger.attach("1.3");
-    await wc.debugger.sendCommand("Emulation.setDeviceMetricsOverride", {
-      width: cssW,
-      height: cssH,
-      deviceScaleFactor: scale,
-      mobile: cssH >= cssW,
-      scale: 1
-    });
-    await delay(200);
-    const shot = await wc.debugger.sendCommand("Page.captureScreenshot", {
-      format: "png",
-      fromSurface: true,
-      captureBeyondViewport: true
-    });
-    return Buffer.from(shot.data, "base64");
-  } catch {
-    return null;
-  } finally {
-    try {
-      await wc.debugger.sendCommand("Emulation.clearDeviceMetricsOverride");
-    } catch {
-    }
-    try {
-      if (wc.debugger.isAttached()) wc.debugger.detach();
-    } catch {
-    }
-    clearDeviceEmulation(wc);
-  }
-}
-async function captureWithResize(wc, _cssW, _cssH, outW, outH) {
-  clearDeviceEmulation(wc);
-  await delay(40);
-  let image = await wc.capturePage();
-  const size = image.getSize();
-  if (size.width !== outW || size.height !== outH) {
-    image = image.resize({
-      width: outW,
-      height: outH,
-      quality: "best"
-    });
-  }
-  return image;
-}
 ipcMain.handle(
   "pixelgrid:capture-screenshot",
   async (_event, payload) => {
-    const cssW = Math.max(1, Math.round(payload.width));
-    const cssH = Math.max(1, Math.round(payload.height));
-    const targetLong = SCREENSHOT_LONG_EDGE[payload.quality] ?? 3840;
-    const longEdge = Math.max(cssW, cssH);
-    const scale = Math.max(1, targetLong / longEdge);
-    const outW = Math.round(cssW * scale);
-    const outH = Math.round(cssH * scale);
     let wc;
-    const hadEmbeddedDevTools = attachedGuestId === payload.webContentsId && devtoolsView !== null;
+    let outW = 0;
+    let outH = 0;
     try {
       if (!win) return { ok: false, error: "No window" };
       wc = webContents.fromId(payload.webContentsId);
       if (!wc || wc.isDestroyed()) {
         return { ok: false, error: "Panel webview no listo" };
       }
-      if (hadEmbeddedDevTools) {
-        hideDevToolsView();
-        await delay(60);
-      }
-      let png = await captureWithCdp(wc, cssW, cssH, scale);
-      if (!png) {
-        const image = await captureWithResize(wc, cssW, cssH, outW, outH);
-        png = image.toPNG();
-      }
       clearDeviceEmulation(wc);
+      let image = await wc.capturePage();
+      const src = image.getSize();
+      if (src.width < 2 || src.height < 2) {
+        return { ok: false, error: "Viewport vacío" };
+      }
+      const targetLong = SCREENSHOT_LONG_EDGE[payload.quality] ?? 0;
+      if (targetLong > 0) {
+        const srcLong = Math.max(src.width, src.height);
+        const scale = targetLong / srcLong;
+        outW = Math.max(1, Math.round(src.width * scale));
+        outH = Math.max(1, Math.round(src.height * scale));
+        if (outW !== src.width || outH !== src.height) {
+          image = image.resize({
+            width: outW,
+            height: outH,
+            quality: "best"
+          });
+        }
+      } else {
+        outW = src.width;
+        outH = src.height;
+      }
+      const png = image.toPNG();
+      const label = payload.quality === "native" ? "viewport" : payload.quality;
       const result = await dialog.showSaveDialog(win, {
-        title: `Save screenshot (${payload.quality.toUpperCase()})`,
-        defaultPath: `pixelgrid-${payload.quality}-${outW}x${outH}-${Date.now()}.png`,
+        title: `Guardar captura (${label})`,
+        defaultPath: `pixelgrid-${label}-${outW}x${outH}-${Date.now()}.png`,
         filters: [{ name: "PNG", extensions: ["png"] }]
       });
       if (result.canceled || !result.filePath) {

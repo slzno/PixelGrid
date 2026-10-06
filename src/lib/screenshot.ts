@@ -1,16 +1,16 @@
 import { getWebview } from './webviewRegistry'
 
-export type ScreenshotQuality = '1080p' | '2k' | '4k'
+export type ScreenshotQuality = 'native' | '1080p' | '2k' | '4k'
 
 export const SCREENSHOT_QUALITIES: {
   id: ScreenshotQuality
   label: string
   hint: string
-  longEdge: number
 }[] = [
-  { id: '1080p', label: '1080p', hint: '1920px', longEdge: 1920 },
-  { id: '2k', label: '2K', hint: '2560px', longEdge: 2560 },
-  { id: '4k', label: '4K', hint: '3840px', longEdge: 3840 },
+  { id: 'native', label: 'Viewport', hint: '1:1' },
+  { id: '1080p', label: '1080p', hint: '1920px' },
+  { id: '2k', label: '2K', hint: '2560px' },
+  { id: '4k', label: '4K', hint: '3840px' },
 ]
 
 const QUALITY_STORAGE_KEY = 'pixelgrid-screenshot-quality'
@@ -18,11 +18,18 @@ const QUALITY_STORAGE_KEY = 'pixelgrid-screenshot-quality'
 export function getStoredScreenshotQuality(): ScreenshotQuality {
   try {
     const raw = localStorage.getItem(QUALITY_STORAGE_KEY)
-    if (raw === '1080p' || raw === '2k' || raw === '4k') return raw
+    if (
+      raw === 'native' ||
+      raw === '1080p' ||
+      raw === '2k' ||
+      raw === '4k'
+    ) {
+      return raw
+    }
   } catch {
     // ignore
   }
-  return '4k'
+  return 'native'
 }
 
 export function setStoredScreenshotQuality(quality: ScreenshotQuality) {
@@ -35,7 +42,7 @@ export function setStoredScreenshotQuality(quality: ScreenshotQuality) {
 
 export async function capturePaneScreenshot(
   paneId: string,
-  opts: { width: number; height: number; quality: ScreenshotQuality },
+  opts: { quality: ScreenshotQuality },
 ) {
   const webview = getWebview(paneId)
   if (!webview) {
@@ -51,8 +58,6 @@ export async function capturePaneScreenshot(
 
   return (await window.ipcRenderer.invoke('pixelgrid:capture-screenshot', {
     webContentsId,
-    width: Math.max(1, Math.round(opts.width)),
-    height: Math.max(1, Math.round(opts.height)),
     quality: opts.quality,
   })) as {
     ok: boolean

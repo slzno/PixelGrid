@@ -1,0 +1,49 @@
+---
+description: Preservar UTF-8 y acentos en textos en español del código fuente
+alwaysApply: true
+---
+
+# Texto en español: UTF-8 sin corrupción
+
+Al escribir o editar strings visibles al usuario en español, **usar siempre UTF-8 real** con tildes y eñes correctas.
+
+## Prohibido
+
+- Sustituir letras acentuadas por `?` (ej. `C?digo`, `Visualizaci?n`, `facturaci?n`)
+- Usar escapes ASCII innecesarios cuando el archivo ya es UTF-8
+- Reescribir un archivo completo si solo cambian unas líneas (reduce riesgo de corrupción de encoding)
+
+## Correcto
+
+```tsx
+<CardDescription>Visualización e impresión de etiqueta para inventario y facturación.</CardDescription>
+<p>Código inválido para escaneo</p>
+```
+
+## Incorrecto
+
+```tsx
+<CardDescription>Visualizaci?n e impresi?n de etiqueta para inventario y facturaci?n.</CardDescription>
+<p>C?digo inv?lido para escaneo</p>
+```
+
+## Al editar archivos
+
+1. Verificar que los acentos se guardaron bien después de cada cambio
+2. Si un archivo ya tiene `?` donde debería haber tilde, corregir **todas** las ocurrencias del archivo
+3. Preferir `StrReplace` puntual sobre reescrituras masivas de archivos con texto en español
+
+## Relacionado
+
+- Validar ortografía y uso según RAE: regla `spanish-rae-lang-es`
+
+## Verificación obligatoria tras editar
+
+Después de **cualquier** cambio en archivos con texto en español:
+
+1. Buscar patrones corruptos: `C?digo`, `Visualizaci?n`, `impresi?n`, `[a-z]?n` donde debería haber tilde
+2. Si aparecen, corregir de inmediato con script Python (`encoding='utf-8'`) — no reintentar solo con StrReplace/Write
+3. Confirmar en disco que las líneas contienen caracteres acentuados reales (ó, á, í, ñ), no `?`
+
+Si StrReplace o Write corrompen tildes, **detenerse y reparar el archivo antes de continuar**.
+

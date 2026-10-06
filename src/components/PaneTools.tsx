@@ -71,8 +71,6 @@ export function PaneTools({ pane, compactTools = false }: PaneToolsProps) {
     setFocusedPane(pane.id)
     try {
       const result = await capturePaneScreenshot(pane.id, {
-        width: pane.width,
-        height: pane.height,
         quality: getStoredScreenshotQuality(),
       })
       if (result.canceled) {

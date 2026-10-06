@@ -93,12 +93,7 @@ export function PaneToolbar({ pane, width }: PaneToolbarProps) {
             className="pane-orient-icon"
           />
         </button>
-        <ScreenshotMenu
-          variant="pane"
-          paneId={pane.id}
-          width={pane.width}
-          height={pane.height}
-        />
+        <ScreenshotMenu variant="pane" paneId={pane.id} />
       </div>
 
       <span className="pane-icon-sep" aria-hidden />

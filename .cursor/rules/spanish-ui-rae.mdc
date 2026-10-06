@@ -1,0 +1,42 @@
+---
+description: Mayúsculas en UI española según RAE (oración, no Title Case)
+globs: resources/js/**/*.{tsx,ts},database/seeders/**/*.php,database/migrations/**/*permission*.php
+alwaysApply: false
+---
+
+# Mayúsculas UI (RAE): oración, no Title Case
+
+Textos visibles en español: **solo mayúscula en la primera palabra** (y nombres propios / siglas). No capitalizar cada palabra.
+
+## Correcto
+
+- Anular entrada
+- Todas las entradas
+- Código de entrada
+- Imprimir entrada
+- Quitar producto
+- Guardar cambios
+- Agregar producto / Editar producto
+
+## Incorrecto (Title Case / “camel case” visual)
+
+- Anular Entrada
+- Todas las Entradas
+- Código de Entrada
+- Imprimir Entrada
+- Guardar Cambios
+
+## Excepciones
+
+- Marca / producto (FoodLy), nombres propios, siglas (POS, NIF, QR)
+- Identificadores de código (`cancelPurchase`, `purchases.delete`) — no renombrar
+- Clases CSS `uppercase` — estilo visual, no ortografía del string
+
+## Dónde aplica
+
+Botones, `DialogTitle`, headings, columnas de tabla, toasts/Sileo, labels, slugs visibles de permisos (`slug` en seeders).
+
+## Relacionado
+
+- Ortografía y tildes: `spanish-rae-lang-es`
+- Encoding UTF-8: `utf8-spanish-text`

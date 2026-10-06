@@ -1,0 +1,56 @@
+---
+description: Validar textos en español (lang es) según normas RAE antes de escribirlos en el código
+alwaysApply: true
+---
+
+# Español (lang es): validación RAE
+
+Todo texto visible al usuario en español debe cumplir la **Real Academia Española (RAE)**: ortografía, acentuación, puntuación y uso léxico.
+
+## Cuándo aplica
+
+- Labels, botones, títulos, descripciones, mensajes de error/éxito, placeholders
+- Comentarios de documentación orientados al usuario o equipo hispanohablante
+- Traducciones o copy de UI en archivos `*.tsx`, `*.ts`, `*.php`, `*.blade.php`, etc.
+
+## Antes de escribir o editar copy en español
+
+1. **Ortografía y tildes**: usar formas acentuadas correctas (`código`, `visualización`, `facturación`, `inválido`).
+2. **Evitar corrupciones**: nunca `?` en lugar de letras acentuadas (ver regla `utf8-spanish-text`).
+3. **Duda léxica u ortográfica**: consultar el DLE de la RAE en https://dle.rae.es (búsqueda web o fetch) antes de fijar el texto.
+4. **Consistencia**: mantener el mismo término en toda la app (`Facturación`, no mezclar `Billing`/`Facturación` en UI es).
+
+## Criterios RAE prácticos
+
+- Tilde en interrogativos/exclamativos: `¿…?`, `¡…!`
+- Mayúsculas solo donde corresponde (inicio de frase, nombres propios); **no** Title Case en títulos/botones (ver `spanish-ui-rae`: `Anular entrada`, no `Anular Entrada`)
+- Preferir español claro y directo; anglicismos solo si ya son término establecido en el dominio (ej. POS)
+- Signos de puntuación españoles: coma decimal según contexto del proyecto; punto y coma solo cuando la frase lo requiera
+
+## Flujo de validación
+
+```
+¿Texto nuevo o modificado en español?
+  → ¿Seguro de ortografía/acento/uso?
+      Sí → escribir con UTF-8 correcto
+      No → consultar dle.rae.es → aplicar forma admitida → verificar UTF-8 en archivo
+```
+
+## Ejemplos
+
+```tsx
+// ✅ RAE + UTF-8 + mayúsculas de oración
+<CardDescription>Visualización e impresión de etiqueta para inventario y facturación.</CardDescription>
+<Button>Anular entrada</Button>
+Sileo.error('Sin código', 'Asigna un código de barras al producto antes de imprimir la etiqueta.');
+
+// ❌ Ortografía/encoding incorrectos o Title Case
+<CardDescription>Visualizaci?n e impresion de etiqueta...</CardDescription>
+<Button>Anular Entrada</Button>
+<p>Codigo invalido para escaneo</p>
+```
+
+## Referencias
+
+- DLE: https://dle.rae.es
+- Ortografía: https://www.rae.es/recursos/ortografia

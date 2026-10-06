@@ -194,12 +194,7 @@ export function Toolbar() {
           </button>
 
           {focusedPane && (
-            <ScreenshotMenu
-              variant="topbar"
-              paneId={focusedPane.id}
-              width={focusedPane.width}
-              height={focusedPane.height}
-            />
+            <ScreenshotMenu variant="topbar" paneId={focusedPane.id} />
           )}
 
           <button

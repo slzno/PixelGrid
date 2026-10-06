@@ -1,0 +1,37 @@
+---
+description: Tras cada cambio, ofrecer git ci "descripción" listo para copiar
+alwaysApply: true
+---
+
+# Commit description al terminar cambios
+
+Después de **cada** bloque de trabajo con cambios en el repo, al final de la respuesta incluye un comando listo para copiar en este formato exacto:
+
+```
+git ci "descripción breve del cambio"
+```
+
+## Cuándo
+
+- Tras implementar o corregir algo (aunque el usuario no pida commit)
+- Tras crear/editar reglas, migraciones o seeders
+- Un mensaje por el conjunto de cambios del turno
+
+## Formato (obligatorio)
+
+- Una sola línea: `git ci "…"`
+- Descripción en español, clara, enfocada en el **porqué** o el resultado
+- Sin cuerpo multilínea, sin HEREDOC
+- No ejecutar el commit salvo que el usuario lo pida explícitamente
+
+## Estilo
+
+- Preferir prefijos: `feat:`, `fix:`, `refactor:`, `style:`, `chore:`, `docs:`
+- No inventar cambios no hechos
+- UTF-8 / RAE en el texto entre comillas
+
+## Ejemplo
+
+```
+git ci "fix: conectar notas de compra en el formulario"
+```
