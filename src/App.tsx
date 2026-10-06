@@ -1,6 +1,6 @@
 import { Toolbar } from './components/Toolbar'
 import { PaneGrid } from './components/PaneGrid'
-import { InspectPanel } from './components/tools/InspectPanel'
+import { DevToolsPanel } from './components/tools/DevToolsPanel'
 import { AppStoreProvider, useAppStore } from './store/useAppStore'
 import './styles/app.css'
 
@@ -9,7 +9,7 @@ function Workspace() {
   return (
     <div className={`workspace${state.sidePanelOpen ? ' with-side' : ''}`}>
       <PaneGrid />
-      {state.sidePanelOpen && <InspectPanel />}
+      {state.sidePanelOpen && <DevToolsPanel />}
     </div>
   )
 }

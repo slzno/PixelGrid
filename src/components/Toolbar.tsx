@@ -217,9 +217,18 @@ export function Toolbar() {
           <button
             type="button"
             className={`topbar-icon${state.sidePanelOpen ? ' active' : ''}`}
-            title="Inspector"
-            aria-label="Inspector"
-            onClick={() => setSidePanel(!state.sidePanelOpen)}
+            title="Developer Tools del panel activo"
+            aria-label="Developer Tools del panel activo"
+            onClick={() => {
+              const paneId = state.focusedPaneId ?? state.panes[0]?.id
+              if (!paneId) return
+              if (state.sidePanelOpen) {
+                setSidePanel(false)
+                return
+              }
+              setFocusedPane(paneId)
+              setSidePanel(true)
+            }}
           >
             <Code2 size={16} strokeWidth={1.75} />
           </button>

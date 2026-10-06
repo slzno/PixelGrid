@@ -1,4 +1,4 @@
-import { ipcMain, webContents, dialog, app, BrowserWindow } from "electron";
+import { ipcMain, webContents, dialog, app, BrowserWindow, BrowserView } from "electron";
 import { fileURLToPath } from "node:url";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -9,6 +9,8 @@ const MAIN_DIST = path.join(process.env.APP_ROOT, "dist-electron");
 const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
 let win;
+let devtoolsView = null;
+let attachedGuestId = null;
 function createWindow() {
   win = new BrowserWindow({
     title: "Pixelgrid",
@@ -26,14 +28,53 @@ function createWindow() {
     }
   });
   win.setMenuBarVisibility(false);
-  win.webContents.on("did-finish-load", () => {
-    win == null ? void 0 : win.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
+  win.on("resize", () => {
+  });
+  win.on("closed", () => {
+    devtoolsView = null;
+    attachedGuestId = null;
+    win = null;
   });
   if (VITE_DEV_SERVER_URL) {
     win.loadURL(VITE_DEV_SERVER_URL);
   } else {
     win.loadFile(path.join(RENDERER_DIST, "index.html"));
   }
+}
+function ensureDevToolsView() {
+  if (!win) return null;
+  if (devtoolsView) return devtoolsView;
+  devtoolsView = new BrowserView({
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true
+    }
+  });
+  win.addBrowserView(devtoolsView);
+  return devtoolsView;
+}
+function applyDevToolsBounds(bounds) {
+  if (!devtoolsView) return;
+  devtoolsView.setBounds({
+    x: Math.max(0, Math.round(bounds.x)),
+    y: Math.max(0, Math.round(bounds.y)),
+    width: Math.max(120, Math.round(bounds.width)),
+    height: Math.max(120, Math.round(bounds.height))
+  });
+}
+function hideDevToolsView() {
+  if (attachedGuestId !== null) {
+    const guest = webContents.fromId(attachedGuestId);
+    if (guest && !guest.isDestroyed() && guest.isDevToolsOpened()) {
+      guest.closeDevTools();
+    }
+    attachedGuestId = null;
+  }
+  if (win && devtoolsView) {
+    win.removeBrowserView(devtoolsView);
+  }
+  devtoolsView = null;
 }
 ipcMain.handle(
   "pixelgrid:emulate-viewport",
@@ -61,6 +102,68 @@ ipcMain.handle(
     }
   }
 );
+ipcMain.handle(
+  "pixelgrid:devtools-show",
+  async (_event, payload) => {
+    try {
+      if (!win) return { ok: false, error: "No window" };
+      const guest = webContents.fromId(payload.guestWebContentsId);
+      if (!guest || guest.isDestroyed()) {
+        return { ok: false, error: "Panel webview no listo" };
+      }
+      const view = ensureDevToolsView();
+      if (!view) return { ok: false, error: "No se pudo crear DevTools" };
+      applyDevToolsBounds(payload.bounds);
+      const previousGuestId = attachedGuestId;
+      const switching = previousGuestId !== null && previousGuestId !== payload.guestWebContentsId;
+      if (switching && previousGuestId !== null) {
+        const prev = webContents.fromId(previousGuestId);
+        if (prev && !prev.isDestroyed() && prev.isDevToolsOpened()) {
+          prev.closeDevTools();
+        }
+      }
+      if (switching || !guest.isDevToolsOpened()) {
+        if (guest.isDevToolsOpened()) guest.closeDevTools();
+        guest.setDevToolsWebContents(view.webContents);
+        guest.openDevTools({ mode: "detach", activate: true });
+        attachedGuestId = payload.guestWebContentsId;
+      }
+      win.setTopBrowserView(view);
+      return { ok: true };
+    } catch (error) {
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : "DevTools failed"
+      };
+    }
+  }
+);
+ipcMain.handle(
+  "pixelgrid:devtools-layout",
+  async (_event, payload) => {
+    try {
+      if (!devtoolsView) return { ok: false };
+      applyDevToolsBounds(payload.bounds);
+      return { ok: true };
+    } catch (error) {
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : "Layout failed"
+      };
+    }
+  }
+);
+ipcMain.handle("pixelgrid:devtools-hide", async () => {
+  try {
+    hideDevToolsView();
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Hide failed"
+    };
+  }
+});
 ipcMain.handle(
   "pixelgrid:save-screenshot",
   async (_event, dataUrl) => {

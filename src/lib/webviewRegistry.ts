@@ -18,6 +18,9 @@ type WebviewEl = HTMLElement & {
   getWebContentsId(): number
   executeJavaScript<T = unknown>(code: string, userGesture?: boolean): Promise<T>
   insertCSS(css: string): Promise<string>
+  openDevTools(): void
+  closeDevTools(): void
+  isDevToolsOpened(): boolean
   addEventListener(
     type: string,
     listener: (event: Event & Record<string, unknown>) => void,

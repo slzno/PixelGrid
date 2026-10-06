@@ -150,13 +150,19 @@ export function PaneToolbar({ pane, width }: PaneToolbarProps) {
         <button
           type="button"
           className={`pane-icon-btn${
-            pane.activeTool === 'inspect' ? ' active' : ''
+            state.sidePanelOpen && state.focusedPaneId === pane.id
+              ? ' active'
+              : ''
           }`}
-          title="Ver código"
-          aria-label="Ver código"
+          title="Developer Tools"
+          aria-label="Developer Tools"
           onClick={(event) => {
             event.stopPropagation()
-            togglePaneTool(pane.id, 'inspect')
+            if (state.sidePanelOpen && state.focusedPaneId === pane.id) {
+              setSidePanel(false)
+              return
+            }
+            setFocusedPane(pane.id)
             setSidePanel(true)
           }}
         >
