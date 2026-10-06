@@ -6,12 +6,13 @@ import {
   Columns2,
   Focus,
   LayoutPanelLeft,
-  Link2,
   Moon,
   Plus,
+  RefreshCcw,
   RefreshCw,
   Rows2,
   Settings,
+  Smartphone,
   Sun,
 } from 'lucide-react'
 import { getAddPaneGroups } from '@/data/devicePresets'
@@ -55,6 +56,7 @@ export function Toolbar() {
     addPane,
     setFocusedPane,
     toggleUiTheme,
+    toggleShowMockups,
   } = useAppStore()
 
   const goBack = () => {
@@ -210,15 +212,33 @@ export function Toolbar() {
           <button
             type="button"
             className={`topbar-icon${state.syncEnabled ? ' active' : ''}`}
-            title="Sincronizar scroll"
-            aria-label="Sincronizar scroll"
+            title="Sincronizar paneles"
+            aria-label="Sincronizar paneles"
             onClick={() => {
               const next = !state.syncEnabled
               setSyncEnabled(next)
               if (next) setSyncScroll(true)
             }}
           >
-            <Link2 size={16} strokeWidth={1.75} />
+            <RefreshCcw size={16} strokeWidth={1.75} />
+          </button>
+
+          <button
+            type="button"
+            className={`topbar-icon${state.showMockups ? ' active' : ''}`}
+            title={
+              state.showMockups
+                ? 'Ocultar mockups de dispositivos'
+                : 'Mostrar mockups de dispositivos'
+            }
+            aria-label={
+              state.showMockups
+                ? 'Ocultar mockups de dispositivos'
+                : 'Mostrar mockups de dispositivos'
+            }
+            onClick={toggleShowMockups}
+          >
+            <Smartphone size={16} strokeWidth={1.75} />
           </button>
 
           {focusedPane && (

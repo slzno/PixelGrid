@@ -12,7 +12,7 @@ import { useAppStore } from '@/store/useAppStore'
 const MIN_WIDTH = 280
 const MAX_WIDTH_RATIO = 0.72
 const DEFAULT_WIDTH = 440
-const WIDTH_STORAGE_KEY = 'pixelgrid-devtools-width'
+const WIDTH_STORAGE_KEY = 'prixelgrid-devtools-width'
 
 function clampWidth(value: number) {
   const max = Math.floor(window.innerWidth * MAX_WIDTH_RATIO)
@@ -73,7 +73,7 @@ export function DevToolsPanel() {
     const bounds = measureBounds(slotRef.current)
     if (bounds.width < 80 || bounds.height < 80) return
 
-    const result = (await window.ipcRenderer.invoke('pixelgrid:devtools-show', {
+    const result = (await window.ipcRenderer.invoke('prixelgrid:devtools-show', {
       guestWebContentsId: guestId,
       bounds,
     })) as { ok: boolean; error?: string }
@@ -94,7 +94,7 @@ export function DevToolsPanel() {
     if (!slotRef.current) return
     const bounds = measureBounds(slotRef.current)
     if (bounds.width < 80 || bounds.height < 80) return
-    await window.ipcRenderer.invoke('pixelgrid:devtools-layout', { bounds })
+    await window.ipcRenderer.invoke('prixelgrid:devtools-layout', { bounds })
   }, [])
 
   useEffect(() => {
@@ -126,7 +126,7 @@ export function DevToolsPanel() {
 
   useEffect(() => {
     return () => {
-      void window.ipcRenderer.invoke('pixelgrid:devtools-hide')
+      void window.ipcRenderer.invoke('prixelgrid:devtools-hide')
     }
   }, [])
 
@@ -135,7 +135,7 @@ export function DevToolsPanel() {
   }, [width])
 
   const onClose = () => {
-    void window.ipcRenderer.invoke('pixelgrid:devtools-hide')
+    void window.ipcRenderer.invoke('prixelgrid:devtools-hide')
     setSidePanel(false)
   }
 

@@ -34,7 +34,7 @@ export const SCREENSHOT_QUALITIES: {
   { id: '4k', label: '4K', hint: 'nítido' },
 ]
 
-const QUALITY_STORAGE_KEY = 'pixelgrid-screenshot-quality'
+const QUALITY_STORAGE_KEY = 'prixelgrid-screenshot-quality'
 
 export function getStoredScreenshotQuality(): ScreenshotQuality {
   try {
@@ -79,7 +79,7 @@ export async function capturePaneScreenshot(
 
   const { cssWidth, cssHeight } = readCssViewport(webview)
 
-  return (await window.ipcRenderer.invoke('pixelgrid:capture-screenshot', {
+  return (await window.ipcRenderer.invoke('prixelgrid:capture-screenshot', {
     webContentsId,
     quality: opts.quality,
     cssWidth,

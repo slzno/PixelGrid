@@ -49,6 +49,8 @@ export type AppStoreValue = {
   setSidePanel: (open: boolean) => void
   setUiTheme: (uiTheme: UiTheme) => void
   toggleUiTheme: () => void
+  setShowMockups: (showMockups: boolean) => void
+  toggleShowMockups: () => void
 }
 
 export const AppStoreContext = createContext<AppStoreValue | null>(null)

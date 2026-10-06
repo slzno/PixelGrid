@@ -1,30 +1,61 @@
-# React + TypeScript + Vite
+# PrixelGrid
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Navegador multipanel para previsualizar y probar sitios web en varios dispositivos a la vez.
 
-Currently, two official plugins are available:
+**Creado por [Pagorium Technologies](https://pagorium.com)**
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Características
 
-## Expanding the ESLint configuration
+- Varios viewports sincronizados (móvil, tableta, portátil, escritorio)
+- Mockups de dispositivos Space Gray / Silver
+- Capturas del viewport a alta resolución
+- Tema claro y oscuro de la aplicación
+- Herramientas de desarrollo embebidas por panel
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+## Desarrollo
 
-- Configure the top-level `parserOptions` property like this:
-
-```js
-export default {
-  // other rules...
-  parserOptions: {
-    ecmaVersion: 'latest',
-    sourceType: 'module',
-    project: ['./tsconfig.json', './tsconfig.node.json'],
-    tsconfigRootDir: __dirname,
-  },
-}
+```bash
+npm install
+npm run dev
 ```
 
-- Replace `plugin:@typescript-eslint/recommended` to `plugin:@typescript-eslint/recommended-type-checked` or `plugin:@typescript-eslint/strict-type-checked`
-- Optionally add `plugin:@typescript-eslint/stylistic-type-checked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and add `plugin:react/recommended` & `plugin:react/jsx-runtime` to the `extends` list
+## Build y distribución
+
+```bash
+# Empaquetar sin publicar
+npm run dist
+
+# Por plataforma
+npm run dist:mac
+npm run dist:win
+npm run dist:linux
+
+# Carpeta sin instalador
+npm run pack
+
+# Publicar release (requiere GH_TOKEN / GitHub)
+npm run release
+```
+
+Los artefactos quedan en `release/<versión>/`.
+
+## Metadatos
+
+| Campo | Valor |
+| --- | --- |
+| Producto | PrixelGrid |
+| App ID | `com.pagorium.prixelgrid` |
+| Autor | Pagorium Technologies |
+| Sitio | https://pagorium.com |
+| Contacto | hello@pagorium.com |
+
+## Iconos
+
+- `build/icon.png` — maestro 1024×1024
+- `build/icon.icns` — macOS
+- `build/icon.ico` — Windows
+- `public/prixelgrid.svg` / `public/icons/*` — favicon y web
+
+## Licencia
+
+Software propietario de Pagorium Technologies. Ver `LICENSE`.

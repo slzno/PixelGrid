@@ -56,6 +56,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       focusedPaneId: state.focusedPaneId,
       designGridSize: state.designGridSize,
       uiTheme: state.uiTheme,
+      showMockups: state.showMockups,
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
   }, [
@@ -69,15 +70,16 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     state.focusedPaneId,
     state.designGridSize,
     state.uiTheme,
+    state.showMockups,
   ])
 
-  // Theme only for Pixelgrid chrome (topbar, workspace, menus) — not guest pages.
+  // Theme only for PrixelGrid chrome (topbar, workspace, menus) — not guest pages.
   useEffect(() => {
     const root = document.documentElement
     root.dataset.theme = state.uiTheme
     root.style.colorScheme = state.uiTheme
     void window.ipcRenderer
-      ?.invoke?.('pixelgrid:set-ui-theme', { theme: state.uiTheme })
+      ?.invoke?.('prixelgrid:set-ui-theme', { theme: state.uiTheme })
       .catch(() => undefined)
   }, [state.uiTheme])
 
@@ -228,6 +230,14 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     })
   }, [state.uiTheme])
 
+  const setShowMockups = useCallback((showMockups: boolean) => {
+    dispatch({ type: 'SET_SHOW_MOCKUPS', showMockups })
+  }, [])
+
+  const toggleShowMockups = useCallback(() => {
+    dispatch({ type: 'SET_SHOW_MOCKUPS', showMockups: !state.showMockups })
+  }, [state.showMockups])
+
   const value = useMemo(
     () => ({
       state,
@@ -260,6 +270,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       setSidePanel,
       setUiTheme,
       toggleUiTheme,
+      setShowMockups,
+      toggleShowMockups,
     }),
     [
       state,
@@ -292,6 +304,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       setSidePanel,
       setUiTheme,
       toggleUiTheme,
+      setShowMockups,
+      toggleShowMockups,
     ],
   )
 

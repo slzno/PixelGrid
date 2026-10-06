@@ -80,8 +80,8 @@ export function Pane({ pane, compact = false }: PaneProps) {
   const form = preset?.form ?? 'freeform'
   const mockupSpec = getMockupSpec(form, preset?.category)
   const mockup = mockupOuterSize(mockupSpec, clipWidth, clipHeight, scale)
-  const chromeWidth =
-    mockupSpec.kind === 'none' ? clipWidth : mockup.outerW
+  const useMockup = state.showMockups && mockupSpec.kind !== 'none'
+  const chromeWidth = useMockup ? mockup.outerW : clipWidth
 
   useEffect(() => {
     setPaneSizeLock(pane.id, viewWidth, viewHeight)
@@ -114,11 +114,11 @@ export function Pane({ pane, compact = false }: PaneProps) {
       void safeExecuteJavaScript(
         webview,
         `(() => {
-          let el = document.getElementById('pixelgrid-dark');
+          let el = document.getElementById('prixelgrid-dark');
           if (${pane.darkMode ? 'true' : 'false'}) {
             if (!el) {
               el = document.createElement('style');
-              el.id = 'pixelgrid-dark';
+              el.id = 'prixelgrid-dark';
               document.documentElement.appendChild(el);
             }
             el.textContent = ${JSON.stringify(DARK_CSS)};
@@ -196,10 +196,10 @@ export function Pane({ pane, compact = false }: PaneProps) {
       const message = typeof event.message === 'string' ? event.message : ''
       const tools = toolStateRef.current
 
-      if (message.startsWith('__PIXELGRID_COLOR__')) {
+      if (message.startsWith('__PRIXELGRID_COLOR__')) {
         try {
           const payload = JSON.parse(
-            message.replace('__PIXELGRID_COLOR__', ''),
+            message.replace('__PRIXELGRID_COLOR__', ''),
           ) as { color: string }
           if (payload.color) setPaneColor(pane.id, payload.color)
         } catch {
@@ -208,11 +208,11 @@ export function Pane({ pane, compact = false }: PaneProps) {
         return
       }
 
-      if (message.startsWith('__PIXELGRID_INSPECT__')) {
+      if (message.startsWith('__PRIXELGRID_INSPECT__')) {
         if (tools.activeTool !== 'inspect') return
         try {
           const info = JSON.parse(
-            message.replace('__PIXELGRID_INSPECT__', ''),
+            message.replace('__PRIXELGRID_INSPECT__', ''),
           ) as InspectPayload
           setInspectInfo(info)
           setFocusedPane(pane.id)
@@ -223,13 +223,13 @@ export function Pane({ pane, compact = false }: PaneProps) {
       }
 
       if (!tools.syncEnabled) return
-      if (!message.startsWith('__PIXELGRID__')) return
+      if (!message.startsWith('__PRIXELGRID__')) return
       try {
-        const payload = JSON.parse(message.replace('__PIXELGRID__', '')) as {
+        const payload = JSON.parse(message.replace('__PRIXELGRID__', '')) as {
           channel: string
           payload: Record<string, number | string>
         }
-        if (payload.channel === 'pixelgrid-scroll' && tools.syncScroll) {
+        if (payload.channel === 'prixelgrid-scroll' && tools.syncScroll) {
           forEachWebview((_id, other) => {
             void safeExecuteJavaScript(
               other,
@@ -240,7 +240,7 @@ export function Pane({ pane, compact = false }: PaneProps) {
             )
           }, pane.id)
         }
-        if (payload.channel === 'pixelgrid-pointer' && tools.syncClick) {
+        if (payload.channel === 'prixelgrid-pointer' && tools.syncClick) {
           forEachWebview((_id, other) => {
             void safeExecuteJavaScript(
               other,
@@ -331,11 +331,11 @@ export function Pane({ pane, compact = false }: PaneProps) {
     void safeExecuteJavaScript(
       webview,
       `(() => {
-        let el = document.getElementById('pixelgrid-dark');
+        let el = document.getElementById('prixelgrid-dark');
         if (${pane.darkMode ? 'true' : 'false'}) {
           if (!el) {
             el = document.createElement('style');
-            el.id = 'pixelgrid-dark';
+            el.id = 'prixelgrid-dark';
             document.documentElement.appendChild(el);
           }
           el.textContent = ${JSON.stringify(DARK_CSS)};
@@ -412,9 +412,7 @@ export function Pane({ pane, compact = false }: PaneProps) {
     <article
       className={`device-pane form-${form}${compact ? ' thumb' : ''}${
         isFocused ? ' focused' : ''
-      }${isInspecting ? ' inspecting' : ''}${
-        mockupSpec.kind !== 'none' ? ' has-mockup' : ''
-      }`}
+      }${isInspecting ? ' inspecting' : ''}${useMockup ? ' has-mockup' : ''}`}
       style={{ width: chromeWidth }}
       onClick={() => setFocusedPane(pane.id)}
     >
@@ -442,12 +440,8 @@ export function Pane({ pane, compact = false }: PaneProps) {
       </div>
 
       <div className="viewport-shell" style={{ width: chromeWidth }}>
-        {mockupSpec.kind === 'none' && (
-          <div className="viewport-accent" aria-hidden />
-        )}
-        {mockupSpec.kind === 'none' ? (
-          viewport
-        ) : (
+        {!useMockup && <div className="viewport-accent" aria-hidden />}
+        {useMockup ? (
           <DeviceMockup
             spec={mockupSpec}
             scale={scale}
@@ -462,6 +456,8 @@ export function Pane({ pane, compact = false }: PaneProps) {
           >
             {viewport}
           </DeviceMockup>
+        ) : (
+          viewport
         )}
       </div>
     </article>

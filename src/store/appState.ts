@@ -55,9 +55,11 @@ export type AppState = {
   statusMessage: string | null
   sidePanelOpen: boolean
   uiTheme: UiTheme
+  /** Show device bezels / mockups around panes. */
+  showMockups: boolean
 }
 
-export const STORAGE_KEY = 'pixelgrid-state-v11'
+export const STORAGE_KEY = 'prixelgrid-state-v13'
 export const DEFAULT_URL = 'https://pagorium.com/'
 export const TOPBAR_HEIGHT = 36
 
@@ -132,6 +134,7 @@ export function createDefaultState(): AppState {
     statusMessage: null,
     sidePanelOpen: false,
     uiTheme: 'dark',
+    showMockups: true,
   }
 }
 
@@ -198,6 +201,7 @@ export type Action =
   | { type: 'SET_STATUS_MESSAGE'; statusMessage: string | null }
   | { type: 'SET_SIDE_PANEL'; sidePanelOpen: boolean }
   | { type: 'SET_UI_THEME'; uiTheme: UiTheme }
+  | { type: 'SET_SHOW_MOCKUPS'; showMockups: boolean }
   | { type: 'HYDRATE'; state: Partial<AppState> }
 
 export function reducer(state: AppState, action: Action): AppState {
@@ -363,6 +367,8 @@ export function reducer(state: AppState, action: Action): AppState {
       return { ...state, sidePanelOpen: action.sidePanelOpen }
     case 'SET_UI_THEME':
       return { ...state, uiTheme: normalizeUiTheme(action.uiTheme) }
+    case 'SET_SHOW_MOCKUPS':
+      return { ...state, showMockups: Boolean(action.showMockups) }
     case 'HYDRATE':
       return {
         ...state,
@@ -376,6 +382,10 @@ export function reducer(state: AppState, action: Action): AppState {
           action.state.uiTheme !== undefined
             ? normalizeUiTheme(action.state.uiTheme)
             : state.uiTheme,
+        showMockups:
+          typeof action.state.showMockups === 'boolean'
+            ? action.state.showMockups
+            : state.showMockups,
       }
     default:
       return state
@@ -427,6 +437,10 @@ export function loadPersistedState(): Partial<AppState> | null {
       uiTheme:
         parsed.uiTheme === 'light' || parsed.uiTheme === 'dark'
           ? parsed.uiTheme
+          : undefined,
+      showMockups:
+        typeof parsed.showMockups === 'boolean'
+          ? parsed.showMockups
           : undefined,
     }
   } catch {

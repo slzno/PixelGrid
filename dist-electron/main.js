@@ -1,5 +1,6 @@
 import { ipcMain, webContents, screen, dialog, app, BrowserWindow, BrowserView, nativeImage } from "electron";
 import { fileURLToPath } from "node:url";
+import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
@@ -11,15 +12,27 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 
 let win;
 let devtoolsView = null;
 let attachedGuestId = null;
+function resolveAppIcon() {
+  const candidates = [
+    path.join(process.env.APP_ROOT ?? "", "build", "icon.png"),
+    path.join(process.env.VITE_PUBLIC ?? "", "icons", "icon.png"),
+    path.join(process.env.VITE_PUBLIC ?? "", "prixelgrid.svg")
+  ];
+  for (const candidate of candidates) {
+    if (candidate && existsSync(candidate)) return candidate;
+  }
+  return void 0;
+}
 function createWindow() {
+  const icon = resolveAppIcon();
   win = new BrowserWindow({
-    title: "Pixelgrid",
+    title: "PrixelGrid",
     width: 1440,
     height: 900,
     minWidth: 900,
     minHeight: 600,
-    backgroundColor: "#12141a",
-    icon: path.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
+    backgroundColor: "#1e1f22",
+    ...icon ? { icon } : {},
     webPreferences: {
       preload: path.join(__dirname$1, "preload.mjs"),
       webviewTag: true,
@@ -28,6 +41,12 @@ function createWindow() {
     }
   });
   win.setMenuBarVisibility(false);
+  if (process.platform === "darwin" && app.dock && icon) {
+    try {
+      app.dock.setIcon(icon);
+    } catch {
+    }
+  }
   win.on("closed", () => {
     devtoolsView = null;
     attachedGuestId = null;
@@ -129,7 +148,7 @@ async function captureViewportAtScale(wc, cssWidth, cssHeight, deviceScaleFactor
   }
 }
 ipcMain.handle(
-  "pixelgrid:set-ui-theme",
+  "prixelgrid:set-ui-theme",
   async (_event, payload) => {
     if (!win || win.isDestroyed()) return { ok: false };
     const backgroundColor = payload.theme === "light" ? "#eef0f3" : "#1e1f22";
@@ -138,7 +157,7 @@ ipcMain.handle(
   }
 );
 ipcMain.handle(
-  "pixelgrid:clear-emulation",
+  "prixelgrid:clear-emulation",
   async (_event, payload) => {
     try {
       const wc = webContents.fromId(payload.webContentsId);
@@ -154,7 +173,7 @@ ipcMain.handle(
   }
 );
 ipcMain.handle(
-  "pixelgrid:devtools-show",
+  "prixelgrid:devtools-show",
   async (_event, payload) => {
     try {
       if (!win) return { ok: false, error: "Sin ventana" };
@@ -195,7 +214,7 @@ ipcMain.handle(
   }
 );
 ipcMain.handle(
-  "pixelgrid:devtools-layout",
+  "prixelgrid:devtools-layout",
   async (_event, payload) => {
     try {
       if (!devtoolsView) return { ok: false };
@@ -209,7 +228,7 @@ ipcMain.handle(
     }
   }
 );
-ipcMain.handle("pixelgrid:devtools-hide", async () => {
+ipcMain.handle("prixelgrid:devtools-hide", async () => {
   try {
     hideDevToolsView();
     return { ok: true };
@@ -228,7 +247,7 @@ const SCREENSHOT_LONG_EDGE = {
   "4k": 3840
 };
 ipcMain.handle(
-  "pixelgrid:capture-screenshot",
+  "prixelgrid:capture-screenshot",
   async (_event, payload) => {
     let wc;
     let outW = 0;
@@ -291,7 +310,7 @@ ipcMain.handle(
       const label = payload.quality === "native" ? "viewport" : payload.quality;
       const result = await dialog.showSaveDialog(win, {
         title: `Guardar captura (${label})`,
-        defaultPath: `pixelgrid-${label}-${outW}x${outH}-${Date.now()}.png`,
+        defaultPath: `prixelgrid-${label}-${outW}x${outH}-${Date.now()}.png`,
         filters: [{ name: "PNG", extensions: ["png"] }]
       });
       if (result.canceled || !result.filePath) {
