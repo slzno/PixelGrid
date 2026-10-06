@@ -9,12 +9,10 @@ import {
   Link2,
   Moon,
   Plus,
-  Puzzle,
   RefreshCw,
   Rows2,
   Settings,
   Sun,
-  User,
 } from 'lucide-react'
 import { getAddPaneGroups } from '@/data/devicePresets'
 import {
@@ -140,6 +138,42 @@ export function Toolbar() {
       </form>
 
       <div className="topbar-right">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="topbar-icon add-pane-btn"
+              title="Agregar panel"
+              aria-label="Agregar panel"
+            >
+              <Plus size={16} strokeWidth={1.75} />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            className="max-h-[min(420px,70vh)] w-[280px] overflow-y-auto"
+          >
+            {addGroups.map((group, index) => (
+              <DropdownMenuGroup key={group.id}>
+                {index > 0 && <DropdownMenuSeparator />}
+                <DropdownMenuLabel>{group.label}</DropdownMenuLabel>
+                {group.presets.map((preset) => (
+                  <DropdownMenuItem
+                    key={preset.id}
+                    onClick={() => addPane(preset.id)}
+                    className="justify-between gap-3"
+                  >
+                    <span className="truncate">{preset.name}</span>
+                    <span className="shrink-0 font-mono text-[11px] text-muted-foreground">
+                      {preset.width}×{preset.height}
+                    </span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuGroup>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
         <div className="topbar-tools">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -172,15 +206,6 @@ export function Toolbar() {
               })}
             </DropdownMenuContent>
           </DropdownMenu>
-
-          <button
-            type="button"
-            className="topbar-icon"
-            title="Usuario"
-            aria-label="Usuario"
-          >
-            <User size={16} strokeWidth={1.75} />
-          </button>
 
           <button
             type="button"
@@ -269,55 +294,11 @@ export function Toolbar() {
         <button
           type="button"
           className="topbar-icon"
-          title="Extensiones"
-          aria-label="Extensiones"
-        >
-          <Puzzle size={16} strokeWidth={1.75} />
-        </button>
-        <button
-          type="button"
-          className="topbar-icon"
           title="Ajustes"
           aria-label="Ajustes"
         >
           <Settings size={16} strokeWidth={1.75} />
         </button>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              className="topbar-icon add-pane-btn"
-              title="Agregar panel"
-              aria-label="Agregar panel"
-            >
-              <Plus size={16} strokeWidth={1.75} />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="end"
-            className="max-h-[min(420px,70vh)] w-[280px] overflow-y-auto"
-          >
-            {addGroups.map((group, index) => (
-              <DropdownMenuGroup key={group.id}>
-                {index > 0 && <DropdownMenuSeparator />}
-                <DropdownMenuLabel>{group.label}</DropdownMenuLabel>
-                {group.presets.map((preset) => (
-                  <DropdownMenuItem
-                    key={preset.id}
-                    onClick={() => addPane(preset.id)}
-                    className="justify-between gap-3"
-                  >
-                    <span className="truncate">{preset.name}</span>
-                    <span className="shrink-0 font-mono text-[11px] text-muted-foreground">
-                      {preset.width}×{preset.height}
-                    </span>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuGroup>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
     </header>
   )
