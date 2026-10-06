@@ -116,8 +116,8 @@ export function PaneToolbar({ pane, width }: PaneToolbarProps) {
           className={`pane-icon-btn${
             pane.activeTool === 'overlay' ? ' active' : ''
           }`}
-          title="Overlays"
-          aria-label="Overlays"
+          title="Superposiciones"
+          aria-label="Superposiciones"
           onClick={(event) => {
             event.stopPropagation()
             if (pane.activeTool === 'overlay') {
@@ -157,8 +157,8 @@ export function PaneToolbar({ pane, width }: PaneToolbarProps) {
               ? ' active'
               : ''
           }`}
-          title="Developer Tools"
-          aria-label="Developer Tools"
+          title="Herramientas de desarrollo"
+          aria-label="Herramientas de desarrollo"
           onClick={(event) => {
             event.stopPropagation()
             if (state.sidePanelOpen && state.focusedPaneId === pane.id) {

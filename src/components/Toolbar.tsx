@@ -39,7 +39,7 @@ import {
 const LAYOUTS: { id: LayoutMode; label: string; icon: typeof Columns2 }[] = [
   { id: 'horizontal', label: 'Horizontal', icon: Columns2 },
   { id: 'vertical', label: 'Vertical', icon: Rows2 },
-  { id: 'focus', label: 'Focus', icon: Focus },
+  { id: 'focus', label: 'Enfoque', icon: Focus },
 ]
 
 export function Toolbar() {
@@ -130,7 +130,7 @@ export function Toolbar() {
           className="address-input"
           value={state.draftUrl}
           onChange={(event) => setDraftUrl(event.target.value)}
-          placeholder="Enter URL"
+          placeholder="Escribe una URL"
           spellCheck={false}
           aria-label="URL"
         />
@@ -143,14 +143,14 @@ export function Toolbar() {
               <button
                 type="button"
                 className="topbar-icon"
-                title="Layout"
-                aria-label="Layout"
+                title="Disposición"
+                aria-label="Disposición"
               >
                 <Columns2 size={16} strokeWidth={1.75} />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-44">
-              <DropdownMenuLabel>Layout</DropdownMenuLabel>
+              <DropdownMenuLabel>Disposición</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {LAYOUTS.map((option) => {
                 const Icon = option.icon
@@ -200,8 +200,8 @@ export function Toolbar() {
           <button
             type="button"
             className={`topbar-icon${state.sidePanelOpen ? ' active' : ''}`}
-            title="Developer Tools del panel activo"
-            aria-label="Developer Tools del panel activo"
+            title="Herramientas de desarrollo del panel activo"
+            aria-label="Herramientas de desarrollo del panel activo"
             onClick={() => {
               const paneId = state.focusedPaneId ?? state.panes[0]?.id
               if (!paneId) return

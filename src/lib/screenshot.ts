@@ -46,7 +46,7 @@ export async function capturePaneScreenshot(
 ) {
   const webview = getWebview(paneId)
   if (!webview) {
-    throw new Error('Webview capture unavailable')
+    throw new Error('Captura no disponible')
   }
 
   let webContentsId: number

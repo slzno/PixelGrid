@@ -53,8 +53,8 @@ export type AppState = {
   sidePanelOpen: boolean
 }
 
-export const STORAGE_KEY = 'pixelgrid-state-v9'
-export const DEFAULT_URL = 'https://es.wikipedia.org'
+export const STORAGE_KEY = 'pixelgrid-state-v10'
+export const DEFAULT_URL = 'https://pagorium.com/'
 export const TOPBAR_HEIGHT = 36
 
 function createId() {
@@ -83,7 +83,7 @@ function normalizePane(raw: Partial<Pane> & { id?: string }): Pane | null {
   if (!raw || typeof raw.id !== 'string') return null
   return {
     id: raw.id,
-    name: typeof raw.name === 'string' ? raw.name : 'Custom size',
+    name: typeof raw.name === 'string' ? raw.name : 'Tamaño personalizado',
     width: typeof raw.width === 'number' ? raw.width : 1024,
     height: typeof raw.height === 'number' ? raw.height : 768,
     scale: typeof raw.scale === 'number' ? raw.scale : 1,

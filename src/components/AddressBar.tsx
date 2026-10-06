@@ -15,9 +15,9 @@ export function AddressBar() {
         className="address-input"
         value={state.draftUrl}
         onChange={(event) => setDraftUrl(event.target.value)}
-        placeholder="Enter URL"
+        placeholder="Escribe una URL"
         spellCheck={false}
-        aria-label="Address bar"
+        aria-label="Barra de dirección"
       />
     </form>
   )

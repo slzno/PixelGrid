@@ -120,7 +120,8 @@ ipcMain.handle(
     } catch (error) {
       return {
         ok: false,
-        error: error instanceof Error ? error.message : 'Clear failed',
+        error:
+          error instanceof Error ? error.message : 'No se pudo limpiar la emulación',
       }
     }
   },
@@ -133,14 +134,19 @@ ipcMain.handle(
     payload: { guestWebContentsId: number; bounds: Bounds },
   ) => {
     try {
-      if (!win) return { ok: false, error: 'No window' }
+      if (!win) return { ok: false, error: 'Sin ventana' }
       const guest = webContents.fromId(payload.guestWebContentsId)
       if (!guest || guest.isDestroyed()) {
         return { ok: false, error: 'Panel webview no listo' }
       }
 
       const view = ensureDevToolsView()
-      if (!view) return { ok: false, error: 'No se pudo crear DevTools' }
+      if (!view) {
+        return {
+          ok: false,
+          error: 'No se pudieron crear las herramientas de desarrollo',
+        }
+      }
 
       applyDevToolsBounds(payload.bounds)
 
@@ -168,7 +174,10 @@ ipcMain.handle(
     } catch (error) {
       return {
         ok: false,
-        error: error instanceof Error ? error.message : 'DevTools failed',
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Error en las herramientas de desarrollo',
       }
     }
   },
@@ -184,7 +193,10 @@ ipcMain.handle(
     } catch (error) {
       return {
         ok: false,
-        error: error instanceof Error ? error.message : 'Layout failed',
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Error al ajustar el panel',
       }
     }
   },
@@ -197,7 +209,10 @@ ipcMain.handle('pixelgrid:devtools-hide', async () => {
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : 'Hide failed',
+      error:
+        error instanceof Error
+          ? error.message
+          : 'No se pudo cerrar el panel',
     }
   }
 })
@@ -228,7 +243,7 @@ ipcMain.handle(
     let outH = 0
 
     try {
-      if (!win) return { ok: false, error: 'No window' }
+      if (!win) return { ok: false, error: 'Sin ventana' }
       wc = webContents.fromId(payload.webContentsId)
       if (!wc || wc.isDestroyed()) {
         return { ok: false, error: 'Panel webview no listo' }
@@ -287,7 +302,8 @@ ipcMain.handle(
       }
       return {
         ok: false,
-        error: error instanceof Error ? error.message : 'Capture failed',
+        error:
+          error instanceof Error ? error.message : 'Captura fallida',
       }
     }
   },

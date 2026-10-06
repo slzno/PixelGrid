@@ -182,7 +182,7 @@ export function Pane({ pane, compact = false }: PaneProps) {
       const description =
         typeof event.errorDescription === 'string'
           ? event.errorDescription
-          : 'Failed to load page'
+          : 'No se pudo cargar la página'
       setLoadError(description)
     }
 

@@ -46,7 +46,7 @@ export const DEVICE_PRESETS: DevicePreset[] = [
   // ── Favorites / responsive starters ─────────────────
   preset({
     id: 'mobile-phone',
-    name: 'Mobile Phone',
+    name: 'Teléfono móvil',
     width: 320,
     height: 568,
     platform: 'Generic',
@@ -56,7 +56,7 @@ export const DEVICE_PRESETS: DevicePreset[] = [
   }),
   preset({
     id: 'small-tablet',
-    name: 'Small Tablet',
+    name: 'Tableta pequeña',
     width: 500,
     height: 768,
     platform: 'Generic',
@@ -66,10 +66,10 @@ export const DEVICE_PRESETS: DevicePreset[] = [
   }),
   preset({
     id: 'laptop',
-    name: 'Laptop',
+    name: 'Portátil',
     width: 1280,
     height: 800,
-    platform: 'Desktop',
+    platform: 'Escritorio',
     ppi: 96,
     form: 'laptop',
     category: 'favorites',
@@ -310,7 +310,7 @@ export const DEVICE_PRESETS: DevicePreset[] = [
   }),
   preset({
     id: 'android-compact',
-    name: 'Android Compact',
+    name: 'Android compacto',
     width: 360,
     height: 640,
     platform: 'Android',
@@ -676,7 +676,7 @@ export const DEVICE_PRESETS: DevicePreset[] = [
   }),
   preset({
     id: 'android-tablet-mdpi',
-    name: 'Android Tablet (mdpi)',
+    name: 'Tableta Android (mdpi)',
     width: 800,
     height: 1280,
     platform: 'Android',
@@ -778,7 +778,7 @@ export const DEVICE_PRESETS: DevicePreset[] = [
   }),
   preset({
     id: 'laptop-1366',
-    name: 'Laptop 1366×768',
+    name: 'Portátil 1366×768',
     width: 1366,
     height: 768,
     platform: 'Windows',
@@ -788,7 +788,7 @@ export const DEVICE_PRESETS: DevicePreset[] = [
   }),
   preset({
     id: 'laptop-1440',
-    name: 'Laptop 1440×900',
+    name: 'Portátil 1440×900',
     width: 1440,
     height: 900,
     platform: 'Windows',
@@ -798,7 +798,7 @@ export const DEVICE_PRESETS: DevicePreset[] = [
   }),
   preset({
     id: 'laptop-1600',
-    name: 'Laptop 1600×900',
+    name: 'Portátil 1600×900',
     width: 1600,
     height: 900,
     platform: 'Windows',
@@ -808,7 +808,7 @@ export const DEVICE_PRESETS: DevicePreset[] = [
   }),
   preset({
     id: 'laptop-1920',
-    name: 'Laptop 1920×1080',
+    name: 'Portátil 1920×1080',
     width: 1920,
     height: 1080,
     platform: 'Windows',
@@ -853,7 +853,7 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     name: 'Escritorio HD 1280×720',
     width: 1280,
     height: 720,
-    platform: 'Desktop',
+    platform: 'Escritorio',
     ppi: 96,
     form: 'desktop',
     category: 'desktop',
@@ -863,7 +863,7 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     name: 'Escritorio 1366×768',
     width: 1366,
     height: 768,
-    platform: 'Desktop',
+    platform: 'Escritorio',
     ppi: 96,
     form: 'desktop',
     category: 'desktop',
@@ -873,7 +873,7 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     name: 'Escritorio 1500×1000',
     width: 1500,
     height: 1000,
-    platform: 'Desktop',
+    platform: 'Escritorio',
     ppi: 96,
     form: 'desktop',
     category: 'desktop',
@@ -883,7 +883,7 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     name: 'Escritorio Full HD 1920×1080',
     width: 1920,
     height: 1080,
-    platform: 'Desktop',
+    platform: 'Escritorio',
     ppi: 96,
     form: 'desktop',
     category: 'desktop',
@@ -893,7 +893,7 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     name: 'Escritorio 1920×1200',
     width: 1920,
     height: 1200,
-    platform: 'Desktop',
+    platform: 'Escritorio',
     ppi: 96,
     form: 'desktop',
     category: 'desktop',
@@ -903,7 +903,7 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     name: 'Escritorio QHD 2560×1440',
     width: 2560,
     height: 1440,
-    platform: 'Desktop',
+    platform: 'Escritorio',
     ppi: 109,
     form: 'desktop',
     category: 'desktop',
@@ -913,7 +913,7 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     name: 'Escritorio 2560×1600',
     width: 2560,
     height: 1600,
-    platform: 'Desktop',
+    platform: 'Escritorio',
     ppi: 109,
     form: 'desktop',
     category: 'desktop',
@@ -923,7 +923,7 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     name: 'Escritorio 4K 3840×2160',
     width: 3840,
     height: 2160,
-    platform: 'Desktop',
+    platform: 'Escritorio',
     ppi: 163,
     form: 'desktop',
     category: 'desktop',
@@ -933,7 +933,7 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     name: 'Escritorio 5K 5120×2880',
     width: 5120,
     height: 2880,
-    platform: 'Desktop',
+    platform: 'Escritorio',
     ppi: 218,
     form: 'desktop',
     category: 'desktop',
@@ -983,7 +983,7 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     name: 'Ultrawide 3440×1440',
     width: 3440,
     height: 1440,
-    platform: 'Desktop',
+    platform: 'Escritorio',
     ppi: 110,
     form: 'desktop',
     category: 'desktop',
@@ -993,7 +993,7 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     name: 'Ultrawide 5120×1440',
     width: 5120,
     height: 1440,
-    platform: 'Desktop',
+    platform: 'Escritorio',
     ppi: 109,
     form: 'desktop',
     category: 'desktop',
@@ -1003,7 +1003,7 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     name: 'Ultrawide 2560×1080',
     width: 2560,
     height: 1080,
-    platform: 'Desktop',
+    platform: 'Escritorio',
     ppi: 96,
     form: 'desktop',
     category: 'desktop',
@@ -1012,10 +1012,10 @@ export const DEVICE_PRESETS: DevicePreset[] = [
   // ── Custom ──────────────────────────────────────────
   preset({
     id: 'freeform',
-    name: 'Custom size',
+    name: 'Tamaño personalizado',
     width: 1024,
     height: 768,
-    platform: 'Custom',
+    platform: 'Personalizado',
     ppi: 96,
     form: 'freeform',
     category: 'custom',
@@ -1023,15 +1023,15 @@ export const DEVICE_PRESETS: DevicePreset[] = [
 ]
 
 const CATEGORY_ORDER: { id: DeviceCategory; label: string }[] = [
-  { id: 'favorites', label: 'Favorites' },
+  { id: 'favorites', label: 'Favoritos' },
   { id: 'iphone', label: 'iPhone' },
-  { id: 'android', label: 'Android phones' },
+  { id: 'android', label: 'Teléfonos Android' },
   { id: 'xiaomi', label: 'Xiaomi / Redmi / POCO' },
   { id: 'ipad', label: 'iPad' },
-  { id: 'android-tablet', label: 'Android tablets' },
-  { id: 'laptop', label: 'MacBooks & Laptops' },
+  { id: 'android-tablet', label: 'Tabletas Android' },
+  { id: 'laptop', label: 'MacBook y portátiles' },
   { id: 'desktop', label: 'Escritorios' },
-  { id: 'custom', label: 'Custom' },
+  { id: 'custom', label: 'Personalizado' },
 ]
 
 export function getPresetById(id: string): DevicePreset | undefined {
@@ -1062,7 +1062,7 @@ export function formatDeviceMeta(opts: {
   platform?: string
   ppi?: number
 }) {
-  const platform = opts.platform ?? 'Custom'
+  const platform = opts.platform ?? 'Personalizado'
   const ppi = opts.ppi ?? 96
   return `${platform} · ${opts.width}×${opts.height}/${ppi}ppi`
 }

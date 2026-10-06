@@ -19,7 +19,7 @@ export function InspectPanel() {
   return (
     <aside className="side-panel inspect-panel">
       <div className="side-panel-header">
-        <strong>Inspect · {pane.name}</strong>
+        <strong>Inspeccionar · {pane.name}</strong>
         <button
           type="button"
           className="icon-btn"
@@ -27,42 +27,43 @@ export function InspectPanel() {
             setPaneTool(pane.id, 'none')
             setSidePanel(false)
           }}
-          aria-label="Close inspect"
+          aria-label="Cerrar inspección"
         >
           <X size={15} strokeWidth={1.75} />
         </button>
       </div>
       {!info ? (
         <p className="side-panel-empty">
-          Hover elements in this device, then click to inspect.
+          Pasa el cursor sobre elementos de este dispositivo y haz clic para
+          inspeccionar.
         </p>
       ) : (
         <dl className="inspect-dl">
           <div>
-            <dt>Tag</dt>
+            <dt>Etiqueta</dt>
             <dd>
               {info.tag}
               {info.id ? `#${info.id}` : ''}
             </dd>
           </div>
           <div>
-            <dt>Size</dt>
+            <dt>Tamaño</dt>
             <dd>
               {info.width} × {info.height}px
             </dd>
           </div>
           <div>
-            <dt>Position</dt>
+            <dt>Posición</dt>
             <dd>
               {info.x}, {info.y}
             </dd>
           </div>
           <div>
-            <dt>Classes</dt>
+            <dt>Clases</dt>
             <dd>{info.classes || '—'}</dd>
           </div>
           <div>
-            <dt>Text</dt>
+            <dt>Texto</dt>
             <dd>{info.text || '—'}</dd>
           </div>
         </dl>

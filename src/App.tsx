@@ -29,7 +29,7 @@ function StatusToast() {
   if (!state.statusMessage && !state.loadError) return null
   return (
     <div className={`status-toast${state.loadError ? ' error' : ''}`}>
-      {state.statusMessage || `Load error: ${state.loadError}`}
+      {state.statusMessage || `Error de carga: ${state.loadError}`}
     </div>
   )
 }

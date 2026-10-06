@@ -30,14 +30,14 @@ type ToolDef = {
 }
 
 const TOOLS: ToolDef[] = [
-  { id: 'ruler', label: 'Measure', primary: true },
-  { id: 'screenshot', label: 'Screenshot', primary: true },
-  { id: 'overlay', label: 'Overlay' },
-  { id: 'eyedropper', label: 'Eyedropper' },
-  { id: 'sync', label: 'Sync', primary: true },
-  { id: 'inspect', label: 'Inspect', primary: true },
-  { id: 'rotate', label: 'Rotate' },
-  { id: 'close', label: 'Close', primary: true },
+  { id: 'ruler', label: 'Medir', primary: true },
+  { id: 'screenshot', label: 'Captura', primary: true },
+  { id: 'overlay', label: 'Superposición' },
+  { id: 'eyedropper', label: 'Cuentagotas' },
+  { id: 'sync', label: 'Sincronizar', primary: true },
+  { id: 'inspect', label: 'Inspeccionar', primary: true },
+  { id: 'rotate', label: 'Orientación' },
+  { id: 'close', label: 'Cerrar', primary: true },
 ]
 
 export function PaneTools({ pane, compactTools = false }: PaneToolsProps) {
@@ -74,17 +74,17 @@ export function PaneTools({ pane, compactTools = false }: PaneToolsProps) {
         quality: getStoredScreenshotQuality(),
       })
       if (result.canceled) {
-        setStatusMessage('Screenshot canceled')
+        setStatusMessage('Captura cancelada')
         return
       }
       if (!result.ok) {
-        setStatusMessage(result.error || 'Screenshot failed')
+        setStatusMessage(result.error || 'Captura fallida')
         return
       }
-      setStatusMessage(`Saved ${result.path}`)
+      setStatusMessage(`Guardado: ${result.path}`)
     } catch (error) {
       setStatusMessage(
-        error instanceof Error ? error.message : 'Screenshot failed',
+        error instanceof Error ? error.message : 'Captura fallida',
       )
     }
   }
@@ -105,13 +105,13 @@ export function PaneTools({ pane, compactTools = false }: PaneToolsProps) {
     togglePaneTool(pane.id, 'eyedropper')
     const webview = getWebview(pane.id)
     if (!webview) {
-      setStatusMessage('Device not ready')
+      setStatusMessage('Panel no listo')
       return
     }
     const color = await safeExecuteJavaScript(webview, getEyedropperScript())
     if (typeof color === 'string' && color) {
       setPaneColor(pane.id, color)
-      setStatusMessage(`Color ${color}`)
+      setStatusMessage(`Color: ${color}`)
       try {
         await navigator.clipboard.writeText(color)
       } catch {
@@ -182,7 +182,7 @@ export function PaneTools({ pane, compactTools = false }: PaneToolsProps) {
 
   return (
     <div className="pane-tools-wrap">
-      <div className="pane-tools" role="toolbar" aria-label="Device tools">
+      <div className="pane-tools" role="toolbar" aria-label="Herramientas del panel">
         {visible.map((tool) => (
           <button
             key={tool.id}
@@ -212,8 +212,8 @@ export function PaneTools({ pane, compactTools = false }: PaneToolsProps) {
             <button
               type="button"
               className={`tool-btn${menuOpen ? ' active' : ''}`}
-              title="More tools"
-              aria-label="More tools"
+              title="Más herramientas"
+              aria-label="Más herramientas"
               onClick={(event) => {
                 event.stopPropagation()
                 setMenuOpen((open) => !open)
@@ -257,7 +257,7 @@ export function PaneTools({ pane, compactTools = false }: PaneToolsProps) {
       {pane.activeTool === 'overlay' && (
         <div className="tool-popover pane-tool-popover">
           <label>
-            Opacity
+            Opacidad
             <input
               type="range"
               min={0.05}
@@ -274,7 +274,7 @@ export function PaneTools({ pane, compactTools = false }: PaneToolsProps) {
             className="chip-btn"
             onClick={() => fileRef.current?.click()}
           >
-            Replace image
+            Reemplazar imagen
           </button>
           <button
             type="button"
@@ -284,7 +284,7 @@ export function PaneTools({ pane, compactTools = false }: PaneToolsProps) {
               setPaneTool(pane.id, 'none')
             }}
           >
-            Clear
+            Quitar
           </button>
         </div>
       )}
@@ -297,7 +297,7 @@ export function PaneTools({ pane, compactTools = false }: PaneToolsProps) {
               checked={state.syncEnabled}
               onChange={(event) => setSyncEnabled(event.target.checked)}
             />
-            Sync enabled
+            Sincronización activa
           </label>
           <label className="check-row">
             <input
@@ -306,7 +306,7 @@ export function PaneTools({ pane, compactTools = false }: PaneToolsProps) {
               disabled={!state.syncEnabled}
               onChange={(event) => setSyncScroll(event.target.checked)}
             />
-            Sync scroll
+            Sincronizar scroll
           </label>
           <label className="check-row">
             <input
@@ -315,7 +315,7 @@ export function PaneTools({ pane, compactTools = false }: PaneToolsProps) {
               disabled={!state.syncEnabled}
               onChange={(event) => setSyncClick(event.target.checked)}
             />
-            Sync clicks
+            Sincronizar clics
           </label>
         </div>
       )}

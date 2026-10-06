@@ -8,14 +8,14 @@ export function PaneGrid() {
     return (
       <div className="pane-grid">
         <div className="empty-state">
-          <h2>No panes yet</h2>
-          <p>Add a viewport to start previewing your site.</p>
+          <h2>Aún no hay paneles</h2>
+          <p>Agrega un viewport para previsualizar tu sitio.</p>
           <button
             type="button"
             className="chip-btn active"
             onClick={() => addPane('mobile-phone')}
           >
-            + Add pane
+            + Agregar panel
           </button>
         </div>
       </div>

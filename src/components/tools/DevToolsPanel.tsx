@@ -79,8 +79,12 @@ export function DevToolsPanel() {
     })) as { ok: boolean; error?: string }
 
     if (!result.ok) {
-      setError(result.error || 'No se pudieron abrir las DevTools')
-      setStatusMessage(result.error || 'No se pudieron abrir las DevTools')
+      setError(
+        result.error || 'No se pudieron abrir las herramientas de desarrollo',
+      )
+      setStatusMessage(
+        result.error || 'No se pudieron abrir las herramientas de desarrollo',
+      )
       return
     }
     setError(null)
@@ -167,12 +171,12 @@ export function DevToolsPanel() {
         onPointerDown={onResizePointerDown}
       />
       <div className="side-panel-header">
-        <strong>DevTools · {pane.name}</strong>
+        <strong>Consola · {pane.name}</strong>
         <button
           type="button"
           className="icon-btn"
           onClick={onClose}
-          aria-label="Cerrar DevTools"
+          aria-label="Cerrar consola"
         >
           <X size={15} strokeWidth={1.75} />
         </button>
