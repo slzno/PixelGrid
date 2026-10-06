@@ -1,12 +1,5 @@
-import { useEffect, useRef } from 'react'
-import {
-  Code2,
-  Layers,
-  Moon,
-  RefreshCw,
-  Smartphone,
-  X,
-} from 'lucide-react'
+import { useEffect } from 'react'
+import { Code2, Moon, RefreshCw, Smartphone, X } from 'lucide-react'
 import { DeviceSelect } from '@/components/DeviceSelect'
 import { ScreenshotMenu } from '@/components/ScreenshotMenu'
 import { getWebview, safeReload } from '@/lib/webviewRegistry'
@@ -20,15 +13,11 @@ type PaneToolbarProps = {
 }
 
 export function PaneToolbar({ pane, width }: PaneToolbarProps) {
-  const fileRef = useRef<HTMLInputElement>(null)
   const {
     state,
     rotatePane,
     applyPreset,
-    togglePaneTool,
     togglePaneDark,
-    setPaneOverlay,
-    setPaneTool,
     setFocusedPane,
     setStatusMessage,
     setSidePanel,
@@ -40,18 +29,6 @@ export function PaneToolbar({ pane, width }: PaneToolbarProps) {
     const timer = window.setTimeout(() => setStatusMessage(null), 3200)
     return () => window.clearTimeout(timer)
   }, [state.statusMessage, setStatusMessage])
-
-  const onPickOverlay = (file: File | null) => {
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        setPaneOverlay(pane.id, reader.result)
-        togglePaneTool(pane.id, 'overlay')
-      }
-    }
-    reader.readAsDataURL(file)
-  }
 
   return (
     <div className="pane-icon-row" style={{ width }}>
@@ -110,26 +87,6 @@ export function PaneToolbar({ pane, width }: PaneToolbarProps) {
           }}
         >
           <Moon size={18} strokeWidth={1.75} />
-        </button>
-        <button
-          type="button"
-          className={`pane-icon-btn${
-            pane.activeTool === 'overlay' ? ' active' : ''
-          }`}
-          title="Superposiciones"
-          aria-label="Superposiciones"
-          onClick={(event) => {
-            event.stopPropagation()
-            if (pane.activeTool === 'overlay') {
-              setPaneTool(pane.id, 'none')
-            } else if (!pane.overlayImage) {
-              fileRef.current?.click()
-            } else {
-              togglePaneTool(pane.id, 'overlay')
-            }
-          }}
-        >
-          <Layers size={18} strokeWidth={1.75} />
         </button>
       </div>
 
@@ -190,17 +147,6 @@ export function PaneToolbar({ pane, width }: PaneToolbarProps) {
           <X size={18} strokeWidth={1.75} />
         </button>
       </div>
-
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*"
-        hidden
-        onChange={(event) => {
-          onPickOverlay(event.target.files?.[0] ?? null)
-          event.target.value = ''
-        }}
-      />
     </div>
   )
 }
