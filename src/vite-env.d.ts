@@ -5,6 +5,7 @@ interface WebviewTag extends HTMLElement {
   partition?: string
   allowpopups?: boolean
   useragent?: string
+  preload?: string
   getURL(): string
   getTitle(): string
   isLoading(): boolean
@@ -44,6 +45,9 @@ declare global {
       off: (...args: unknown[]) => unknown
       send: (...args: unknown[]) => void
       invoke: (...args: unknown[]) => Promise<unknown>
+    }
+    pixelgrid?: {
+      getGuestPreloadPath: () => Promise<string | null>
     }
   }
 }

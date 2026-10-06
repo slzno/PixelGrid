@@ -1,263 +1,379 @@
-import { ipcMain as g, webContents as v, screen as V, dialog as O, app as m, BrowserWindow as I, BrowserView as R, nativeImage as S } from "electron";
-import { fileURLToPath as B } from "node:url";
-import { existsSync as A } from "node:fs";
-import W from "node:fs/promises";
-import d from "node:path";
-const k = d.dirname(B(import.meta.url));
-process.env.APP_ROOT = d.join(k, "..");
-const D = process.env.VITE_DEV_SERVER_URL, K = d.join(process.env.APP_ROOT, "dist-electron"), P = d.join(process.env.APP_ROOT, "dist");
-process.env.VITE_PUBLIC = D ? d.join(process.env.APP_ROOT, "public") : P;
-let o, l = null, f = null;
-function j() {
-  const e = [
-    d.join(process.env.APP_ROOT ?? "", "build", "icon.png"),
-    d.join(process.env.VITE_PUBLIC ?? "", "icons", "icon.png"),
-    d.join(process.env.VITE_PUBLIC ?? "", "prixelgrid.svg")
+import { ipcMain, webContents, screen, dialog, app, BrowserWindow, BrowserView, nativeImage } from "electron";
+import { fileURLToPath } from "node:url";
+import { existsSync, copyFileSync } from "node:fs";
+import fs from "node:fs/promises";
+import path from "node:path";
+const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
+process.env.APP_ROOT = path.join(__dirname$1, "..");
+const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
+const MAIN_DIST = path.join(process.env.APP_ROOT, "dist-electron");
+const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
+process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
+let win;
+let devtoolsView = null;
+let attachedGuestId = null;
+function resolveAppIcon() {
+  const candidates = [
+    path.join(process.env.APP_ROOT ?? "", "build", "icon.png"),
+    path.join(process.env.VITE_PUBLIC ?? "", "icons", "icon.png"),
+    path.join(process.env.VITE_PUBLIC ?? "", "pixelgrid.svg")
   ];
-  for (const r of e)
-    if (r && A(r)) return r;
+  for (const candidate of candidates) {
+    if (candidate && existsSync(candidate)) return candidate;
+  }
+  return void 0;
 }
-function T() {
-  const e = j();
-  if (o = new I({
-    title: "PrixelGrid",
+function createWindow() {
+  const icon = resolveAppIcon();
+  win = new BrowserWindow({
+    title: "PixelGrid",
     width: 1440,
     height: 900,
     minWidth: 900,
     minHeight: 600,
     backgroundColor: "#1e1f22",
-    ...e ? { icon: e } : {},
+    ...icon ? { icon } : {},
     webPreferences: {
-      preload: d.join(k, "preload.mjs"),
-      webviewTag: !0,
-      contextIsolation: !0,
-      nodeIntegration: !1
+      preload: path.join(__dirname$1, "preload.mjs"),
+      webviewTag: true,
+      contextIsolation: true,
+      nodeIntegration: false
     }
-  }), o.setMenuBarVisibility(!1), process.platform === "darwin" && m.dock && e)
+  });
+  win.setMenuBarVisibility(false);
+  if (process.platform === "darwin" && app.dock && icon) {
     try {
-      m.dock.setIcon(e);
+      app.dock.setIcon(icon);
     } catch {
     }
-  o.on("closed", () => {
-    l = null, f = null, o = null;
-  }), D ? o.loadURL(D) : o.loadFile(d.join(P, "index.html"));
+  }
+  win.on("closed", () => {
+    devtoolsView = null;
+    attachedGuestId = null;
+    win = null;
+  });
+  if (VITE_DEV_SERVER_URL) {
+    win.loadURL(VITE_DEV_SERVER_URL);
+  } else {
+    win.loadFile(path.join(RENDERER_DIST, "index.html"));
+  }
 }
-function L() {
-  return o ? l || (l = new R({
+function ensureDevToolsView() {
+  if (!win) return null;
+  if (devtoolsView) return devtoolsView;
+  devtoolsView = new BrowserView({
     webPreferences: {
-      contextIsolation: !0,
-      nodeIntegration: !1,
-      sandbox: !0
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true
     }
-  }), o.addBrowserView(l), l) : null;
+  });
+  win.addBrowserView(devtoolsView);
+  return devtoolsView;
 }
-function _(e) {
-  if (!l || !o) return;
-  const [r, t] = o.getContentSize(), i = Math.min(r - 120, Math.max(200, Math.round(e.x))), n = Math.min(t - 120, Math.max(36, Math.round(e.y))), a = Math.max(120, Math.min(Math.round(e.width), r - i)), s = Math.max(120, Math.min(Math.round(e.height), t - n));
-  l.setBounds({ x: i, y: n, width: a, height: s });
+function applyDevToolsBounds(bounds) {
+  if (!devtoolsView || !win) return;
+  const [winW, winH] = win.getContentSize();
+  const x = Math.min(winW - 120, Math.max(200, Math.round(bounds.x)));
+  const y = Math.min(winH - 120, Math.max(36, Math.round(bounds.y)));
+  const width = Math.max(120, Math.min(Math.round(bounds.width), winW - x));
+  const height = Math.max(120, Math.min(Math.round(bounds.height), winH - y));
+  devtoolsView.setBounds({ x, y, width, height });
 }
-function N() {
-  if (f !== null) {
-    const e = v.fromId(f);
-    e && !e.isDestroyed() && e.isDevToolsOpened() && e.closeDevTools(), f = null;
+function hideDevToolsView() {
+  if (attachedGuestId !== null) {
+    const guest = webContents.fromId(attachedGuestId);
+    if (guest && !guest.isDestroyed() && guest.isDevToolsOpened()) {
+      guest.closeDevTools();
+    }
+    attachedGuestId = null;
   }
-  o && l && o.removeBrowserView(l), l = null;
+  if (win && devtoolsView) {
+    win.removeBrowserView(devtoolsView);
+  }
+  devtoolsView = null;
 }
-function p(e) {
+function clearDeviceEmulation(wc) {
   try {
-    e.disableDeviceEmulation();
+    wc.disableDeviceEmulation();
   } catch {
   }
   try {
-    e.debugger.isAttached() && e.debugger.sendCommand("Emulation.clearDeviceMetricsOverride").catch(() => {
-    });
+    if (wc.debugger.isAttached()) {
+      void wc.debugger.sendCommand("Emulation.clearDeviceMetricsOverride").catch(() => void 0);
+    }
   } catch {
   }
 }
-async function G(e, r, t, i) {
-  const n = Math.min(6, Math.max(1, i)), a = Math.max(1, Math.round(r)), s = Math.max(1, Math.round(t)), w = !e.debugger.isAttached();
-  w && e.debugger.attach("1.3");
+async function captureViewportAtScale(wc, cssWidth, cssHeight, deviceScaleFactor) {
+  const dsf = Math.min(6, Math.max(1, deviceScaleFactor));
+  const width = Math.max(1, Math.round(cssWidth));
+  const height = Math.max(1, Math.round(cssHeight));
+  const attachedHere = !wc.debugger.isAttached();
+  if (attachedHere) {
+    wc.debugger.attach("1.3");
+  }
   try {
-    await e.debugger.sendCommand("Emulation.setDeviceMetricsOverride", {
-      width: a,
-      height: s,
-      deviceScaleFactor: n,
-      mobile: s > a,
+    await wc.debugger.sendCommand("Emulation.setDeviceMetricsOverride", {
+      width,
+      height,
+      deviceScaleFactor: dsf,
+      mobile: height > width,
       scale: 1
-    }), await new Promise((b) => setTimeout(b, 80));
-    const u = await e.debugger.sendCommand("Page.captureScreenshot", {
+    });
+    await new Promise((r) => setTimeout(r, 80));
+    const shot = await wc.debugger.sendCommand("Page.captureScreenshot", {
       format: "png",
-      fromSurface: !0,
-      captureBeyondViewport: !1
+      fromSurface: true,
+      captureBeyondViewport: false
     });
-    await e.debugger.sendCommand("Emulation.clearDeviceMetricsOverride").catch(() => {
-    });
-    const M = S.createFromBuffer(Buffer.from(u.data, "base64"));
-    if (M.isEmpty())
+    await wc.debugger.sendCommand("Emulation.clearDeviceMetricsOverride").catch(() => void 0);
+    const image = nativeImage.createFromBuffer(Buffer.from(shot.data, "base64"));
+    if (image.isEmpty()) {
       throw new Error("Captura vacía");
-    return M;
+    }
+    return image;
   } finally {
     try {
-      await e.debugger.sendCommand("Emulation.clearDeviceMetricsOverride").catch(() => {
-      });
+      await wc.debugger.sendCommand("Emulation.clearDeviceMetricsOverride").catch(() => void 0);
     } catch {
     }
-    if (p(e), w && e.debugger.isAttached())
+    clearDeviceEmulation(wc);
+    if (attachedHere && wc.debugger.isAttached()) {
       try {
-        e.debugger.detach();
+        wc.debugger.detach();
       } catch {
       }
+    }
   }
 }
-g.handle(
-  "prixelgrid:set-ui-theme",
-  async (e, r) => {
-    if (!o || o.isDestroyed()) return { ok: !1 };
-    const t = r.theme === "light" ? "#eef0f3" : "#1e1f22";
-    return o.setBackgroundColor(t), { ok: !0 };
+function resolveGuestPreloadPath() {
+  const candidates = [
+    path.join(__dirname$1, "guest-preload.cjs"),
+    path.join(process.env.APP_ROOT ?? "", "electron", "guest-preload.cjs"),
+    path.join(process.env.APP_ROOT ?? "", "dist-electron", "guest-preload.cjs")
+  ];
+  for (const candidate of candidates) {
+    if (candidate && existsSync(candidate)) return candidate;
+  }
+  return null;
+}
+try {
+  const source = path.join(
+    process.env.APP_ROOT ?? path.join(__dirname$1, ".."),
+    "electron",
+    "guest-preload.cjs"
+  );
+  const target = path.join(__dirname$1, "guest-preload.cjs");
+  if (existsSync(source) && source !== target) {
+    copyFileSync(source, target);
+  }
+} catch {
+}
+ipcMain.handle("pixelgrid:guest-preload-path", async () => {
+  return resolveGuestPreloadPath();
+});
+ipcMain.handle(
+  "pixelgrid:set-ui-theme",
+  async (_event, payload) => {
+    if (!win || win.isDestroyed()) return { ok: false };
+    const backgroundColor = payload.theme === "light" ? "#eef0f3" : "#1e1f22";
+    win.setBackgroundColor(backgroundColor);
+    return { ok: true };
   }
 );
-g.handle(
-  "prixelgrid:clear-emulation",
-  async (e, r) => {
+ipcMain.handle(
+  "pixelgrid:clear-emulation",
+  async (_event, payload) => {
     try {
-      const t = v.fromId(r.webContentsId);
-      return !t || t.isDestroyed() ? { ok: !1 } : (p(t), { ok: !0 });
-    } catch (t) {
+      const wc = webContents.fromId(payload.webContentsId);
+      if (!wc || wc.isDestroyed()) return { ok: false };
+      clearDeviceEmulation(wc);
+      return { ok: true };
+    } catch (error) {
       return {
-        ok: !1,
-        error: t instanceof Error ? t.message : "No se pudo limpiar la emulación"
+        ok: false,
+        error: error instanceof Error ? error.message : "No se pudo limpiar la emulación"
       };
     }
   }
 );
-g.handle(
-  "prixelgrid:devtools-show",
-  async (e, r) => {
+ipcMain.handle(
+  "pixelgrid:devtools-show",
+  async (_event, payload) => {
     try {
-      if (!o) return { ok: !1, error: "Sin ventana" };
-      const t = v.fromId(r.guestWebContentsId);
-      if (!t || t.isDestroyed())
-        return { ok: !1, error: "Panel webview no listo" };
-      const i = L();
-      if (!i)
+      if (!win) return { ok: false, error: "Sin ventana" };
+      const guest = webContents.fromId(payload.guestWebContentsId);
+      if (!guest || guest.isDestroyed()) {
+        return { ok: false, error: "Panel webview no listo" };
+      }
+      const view = ensureDevToolsView();
+      if (!view) {
         return {
-          ok: !1,
+          ok: false,
           error: "No se pudieron crear las herramientas de desarrollo"
         };
-      _(r.bounds);
-      const n = f, a = n !== null && n !== r.guestWebContentsId;
-      if (a && n !== null) {
-        const s = v.fromId(n);
-        s && !s.isDestroyed() && s.isDevToolsOpened() && s.closeDevTools();
       }
-      return (a || !t.isDevToolsOpened()) && (t.isDevToolsOpened() && t.closeDevTools(), t.setDevToolsWebContents(i.webContents), t.openDevTools({ mode: "detach", activate: !0 }), f = r.guestWebContentsId), o.setTopBrowserView(i), { ok: !0 };
-    } catch (t) {
+      applyDevToolsBounds(payload.bounds);
+      const previousGuestId = attachedGuestId;
+      const switching = previousGuestId !== null && previousGuestId !== payload.guestWebContentsId;
+      if (switching && previousGuestId !== null) {
+        const prev = webContents.fromId(previousGuestId);
+        if (prev && !prev.isDestroyed() && prev.isDevToolsOpened()) {
+          prev.closeDevTools();
+        }
+      }
+      if (switching || !guest.isDevToolsOpened()) {
+        if (guest.isDevToolsOpened()) guest.closeDevTools();
+        guest.setDevToolsWebContents(view.webContents);
+        guest.openDevTools({ mode: "detach", activate: true });
+        attachedGuestId = payload.guestWebContentsId;
+      }
+      win.setTopBrowserView(view);
+      return { ok: true };
+    } catch (error) {
       return {
-        ok: !1,
-        error: t instanceof Error ? t.message : "Error en las herramientas de desarrollo"
+        ok: false,
+        error: error instanceof Error ? error.message : "Error en las herramientas de desarrollo"
       };
     }
   }
 );
-g.handle(
-  "prixelgrid:devtools-layout",
-  async (e, r) => {
+ipcMain.handle(
+  "pixelgrid:devtools-layout",
+  async (_event, payload) => {
     try {
-      return l ? (_(r.bounds), { ok: !0 }) : { ok: !1 };
-    } catch (t) {
+      if (!devtoolsView) return { ok: false };
+      applyDevToolsBounds(payload.bounds);
+      return { ok: true };
+    } catch (error) {
       return {
-        ok: !1,
-        error: t instanceof Error ? t.message : "Error al ajustar el panel"
+        ok: false,
+        error: error instanceof Error ? error.message : "Error al ajustar el panel"
       };
     }
   }
 );
-g.handle("prixelgrid:devtools-hide", async () => {
+ipcMain.handle("pixelgrid:devtools-hide", async () => {
   try {
-    return N(), { ok: !0 };
-  } catch (e) {
+    hideDevToolsView();
+    return { ok: true };
+  } catch (error) {
     return {
-      ok: !1,
-      error: e instanceof Error ? e.message : "No se pudo cerrar el panel"
+      ok: false,
+      error: error instanceof Error ? error.message : "No se pudo cerrar el panel"
     };
   }
 });
-const H = {
+const SCREENSHOT_LONG_EDGE = {
   native: 0,
   // CSS viewport × display scale (nítido)
   "1080p": 1920,
   "2k": 2560,
   "4k": 3840
 };
-g.handle(
-  "prixelgrid:capture-screenshot",
-  async (e, r) => {
-    let t, i = 0, n = 0;
+ipcMain.handle(
+  "pixelgrid:capture-screenshot",
+  async (_event, payload) => {
+    let wc;
+    let outW = 0;
+    let outH = 0;
     try {
-      if (!o) return { ok: !1, error: "Sin ventana" };
-      if (t = v.fromId(r.webContentsId), !t || t.isDestroyed())
-        return { ok: !1, error: "Panel webview no listo" };
-      p(t);
-      const a = Math.max(1, Math.round(r.cssWidth || 1)), s = Math.max(1, Math.round(r.cssHeight || 1));
-      if (a < 2 || s < 2)
-        return { ok: !1, error: "Viewport vacío" };
-      const w = Math.max(a, s), u = H[r.quality] ?? 0, M = Math.max(
+      if (!win) return { ok: false, error: "Sin ventana" };
+      wc = webContents.fromId(payload.webContentsId);
+      if (!wc || wc.isDestroyed()) {
+        return { ok: false, error: "Panel webview no listo" };
+      }
+      clearDeviceEmulation(wc);
+      const cssWidth = Math.max(1, Math.round(payload.cssWidth || 1));
+      const cssHeight = Math.max(1, Math.round(payload.cssHeight || 1));
+      if (cssWidth < 2 || cssHeight < 2) {
+        return { ok: false, error: "Viewport vacío" };
+      }
+      const cssLong = Math.max(cssWidth, cssHeight);
+      const targetLong = SCREENSHOT_LONG_EDGE[payload.quality] ?? 0;
+      const screenScale = Math.max(
         1,
-        V.getPrimaryDisplay().scaleFactor || 1
-      ), b = u > 0 ? Math.min(6, Math.max(1, u / w)) : Math.min(3, Math.max(2, M));
-      let h;
+        screen.getPrimaryDisplay().scaleFactor || 1
+      );
+      const deviceScaleFactor = targetLong > 0 ? Math.min(6, Math.max(1, targetLong / cssLong)) : Math.min(3, Math.max(2, screenScale));
+      let image;
       try {
-        h = await G(
-          t,
-          a,
-          s,
-          b
+        image = await captureViewportAtScale(
+          wc,
+          cssWidth,
+          cssHeight,
+          deviceScaleFactor
         );
       } catch {
-        h = await t.capturePage();
+        image = await wc.capturePage();
       }
-      const c = h.getSize();
-      if (c.width < 2 || c.height < 2)
-        return { ok: !1, error: "Viewport vacío" };
-      if (u > 0) {
-        const y = Math.max(c.width, c.height);
-        i = Math.max(1, Math.round(c.width * (u / y))), n = Math.max(1, Math.round(c.height * (u / y))), Math.abs(y - u) / u > 0.02 && (i !== c.width || n !== c.height) ? h = h.resize({
-          width: i,
-          height: n,
-          quality: "best"
-        }) : (i = c.width, n = c.height);
-      } else
-        i = c.width, n = c.height;
-      p(t);
-      const C = h.toPNG(), E = r.quality === "native" ? "viewport" : r.quality, x = await O.showSaveDialog(o, {
-        title: `Guardar captura (${E})`,
-        defaultPath: `prixelgrid-${E}-${i}x${n}-${Date.now()}.png`,
+      const src = image.getSize();
+      if (src.width < 2 || src.height < 2) {
+        return { ok: false, error: "Viewport vacío" };
+      }
+      if (targetLong > 0) {
+        const srcLong = Math.max(src.width, src.height);
+        outW = Math.max(1, Math.round(src.width * (targetLong / srcLong)));
+        outH = Math.max(1, Math.round(src.height * (targetLong / srcLong)));
+        const drift = Math.abs(srcLong - targetLong) / targetLong;
+        if (drift > 0.02 && (outW !== src.width || outH !== src.height)) {
+          image = image.resize({
+            width: outW,
+            height: outH,
+            quality: "best"
+          });
+        } else {
+          outW = src.width;
+          outH = src.height;
+        }
+      } else {
+        outW = src.width;
+        outH = src.height;
+      }
+      clearDeviceEmulation(wc);
+      const png = image.toPNG();
+      const label = payload.quality === "native" ? "viewport" : payload.quality;
+      const result = await dialog.showSaveDialog(win, {
+        title: `Guardar captura (${label})`,
+        defaultPath: `pixelgrid-${label}-${outW}x${outH}-${Date.now()}.png`,
         filters: [{ name: "PNG", extensions: ["png"] }]
       });
-      return x.canceled || !x.filePath ? { ok: !1, canceled: !0, width: i, height: n } : (await W.writeFile(x.filePath, C), {
-        ok: !0,
-        path: x.filePath,
-        width: i,
-        height: n
-      });
-    } catch (a) {
-      return t && !t.isDestroyed() && p(t), {
-        ok: !1,
-        error: a instanceof Error ? a.message : "Captura fallida"
+      if (result.canceled || !result.filePath) {
+        return { ok: false, canceled: true, width: outW, height: outH };
+      }
+      await fs.writeFile(result.filePath, png);
+      return {
+        ok: true,
+        path: result.filePath,
+        width: outW,
+        height: outH
+      };
+    } catch (error) {
+      if (wc && !wc.isDestroyed()) {
+        clearDeviceEmulation(wc);
+      }
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : "Captura fallida"
       };
     }
   }
 );
-m.on("window-all-closed", () => {
-  process.platform !== "darwin" && (m.quit(), o = null);
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    app.quit();
+    win = null;
+  }
 });
-m.on("activate", () => {
-  I.getAllWindows().length === 0 && T();
+app.on("activate", () => {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    createWindow();
+  }
 });
-m.whenReady().then(T);
+app.whenReady().then(createWindow);
 export {
-  K as MAIN_DIST,
-  P as RENDERER_DIST,
-  D as VITE_DEV_SERVER_URL
+  MAIN_DIST,
+  RENDERER_DIST,
+  VITE_DEV_SERVER_URL
 };

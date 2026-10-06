@@ -11,7 +11,7 @@ import {
   type WebContents,
 } from 'electron'
 import { fileURLToPath } from 'node:url'
-import { existsSync } from 'node:fs'
+import { copyFileSync, existsSync } from 'node:fs'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
@@ -206,6 +206,37 @@ async function captureViewportAtScale(
     }
   }
 }
+
+function resolveGuestPreloadPath() {
+  const candidates = [
+    path.join(__dirname, 'guest-preload.cjs'),
+    path.join(process.env.APP_ROOT ?? '', 'electron', 'guest-preload.cjs'),
+    path.join(process.env.APP_ROOT ?? '', 'dist-electron', 'guest-preload.cjs'),
+  ]
+  for (const candidate of candidates) {
+    if (candidate && existsSync(candidate)) return candidate
+  }
+  return null
+}
+
+// Ensure packaged/dev builds can load the guest preload next to main.js
+try {
+  const source = path.join(
+    process.env.APP_ROOT ?? path.join(__dirname, '..'),
+    'electron',
+    'guest-preload.cjs',
+  )
+  const target = path.join(__dirname, 'guest-preload.cjs')
+  if (existsSync(source) && source !== target) {
+    copyFileSync(source, target)
+  }
+} catch {
+  // ignore
+}
+
+ipcMain.handle('pixelgrid:guest-preload-path', async () => {
+  return resolveGuestPreloadPath()
+})
 
 ipcMain.handle(
   'pixelgrid:set-ui-theme',

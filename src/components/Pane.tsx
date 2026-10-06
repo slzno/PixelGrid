@@ -1,10 +1,14 @@
-import { useEffect, useRef, type CSSProperties } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { Circle } from 'lucide-react'
 import { getPresetById } from '../data/devicePresets'
 import {
   getApplyPointerScript,
   getApplyScrollScript,
   getSyncInstallScript,
+  parseSyncBridgeArgs,
+  parseSyncConsoleMessage,
+  toGuestPreloadUrl,
+  type SyncBridgeMessage,
 } from '../lib/sync'
 import {
   getInspectEnableScript,
@@ -43,6 +47,9 @@ export function Pane({ pane, compact = false }: PaneProps) {
   const webviewRef = useRef<WebviewEl | null>(null)
   const readyRef = useRef(false)
   const urlRef = useRef('')
+  const guestPreloadRef = useRef<string | null>(null)
+  const [guestPreloadAttr, setGuestPreloadAttr] = useState<string | null>(null)
+  const [preloadReady, setPreloadReady] = useState(false)
   const toolStateRef = useRef({
     syncEnabled: true,
     syncScroll: true,
@@ -92,12 +99,47 @@ export function Pane({ pane, compact = false }: PaneProps) {
   }, [pane.id])
 
   useEffect(() => {
+    let cancelled = false
+    const finish = (filePath: string | null) => {
+      if (cancelled) return
+      if (filePath) {
+        const url = toGuestPreloadUrl(filePath)
+        guestPreloadRef.current = url
+        setGuestPreloadAttr(url)
+      }
+      setPreloadReady(true)
+    }
+    const timer = window.setTimeout(() => finish(null), 800)
+    void window.pixelgrid?.getGuestPreloadPath?.()
+      .then((preloadPath) => {
+        window.clearTimeout(timer)
+        finish(preloadPath)
+      })
+      .catch(() => {
+        window.clearTimeout(timer)
+        finish(null)
+      })
+    if (!window.pixelgrid?.getGuestPreloadPath) {
+      window.clearTimeout(timer)
+      finish(null)
+    }
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!preloadReady) return
     const webview = webviewRef.current
     if (!webview) return
 
     readyRef.current = false
     registerWebview(pane.id, webview)
     setPaneSizeLock(pane.id, viewWidth, viewHeight)
+    if (guestPreloadAttr) {
+      webview.setAttribute('preload', guestPreloadAttr)
+    }
 
     const installGuestTools = () => {
       if (!readyRef.current) return
@@ -107,6 +149,34 @@ export function Pane({ pane, compact = false }: PaneProps) {
         webview,
         getInspectEnableScript(tools.activeTool === 'inspect'),
       )
+    }
+
+    const applySyncMessage = (data: SyncBridgeMessage) => {
+      const tools = toolStateRef.current
+      if (!tools.syncEnabled) return
+      if (data.channel === 'pixelgrid-scroll' && tools.syncScroll) {
+        forEachWebview((_id, other) => {
+          void safeExecuteJavaScript(
+            other,
+            getApplyScrollScript(
+              Number(data.payload.ratioX),
+              Number(data.payload.ratioY),
+            ),
+          )
+        }, pane.id)
+      }
+      if (data.channel === 'pixelgrid-pointer' && tools.syncClick) {
+        forEachWebview((_id, other) => {
+          void safeExecuteJavaScript(
+            other,
+            getApplyPointerScript(
+              data.payload.type as 'click' | 'mousemove',
+              Number(data.payload.ratioX),
+              Number(data.payload.ratioY),
+            ),
+          )
+        }, pane.id)
+      }
     }
 
     const applyDark = () => {
@@ -196,11 +266,11 @@ export function Pane({ pane, compact = false }: PaneProps) {
       const message = typeof event.message === 'string' ? event.message : ''
       const tools = toolStateRef.current
 
-      if (message.startsWith('__PIXELGRID_COLOR__')) {
+      if (message.includes('__PIXELGRID_COLOR__')) {
         try {
-          const payload = JSON.parse(
-            message.replace('__PIXELGRID_COLOR__', ''),
-          ) as { color: string }
+          const marker = '__PIXELGRID_COLOR__'
+          const raw = message.slice(message.indexOf(marker) + marker.length)
+          const payload = JSON.parse(raw) as { color: string }
           if (payload.color) setPaneColor(pane.id, payload.color)
         } catch {
           // ignore
@@ -208,12 +278,12 @@ export function Pane({ pane, compact = false }: PaneProps) {
         return
       }
 
-      if (message.startsWith('__PIXELGRID_INSPECT__')) {
+      if (message.includes('__PIXELGRID_INSPECT__')) {
         if (tools.activeTool !== 'inspect') return
         try {
-          const info = JSON.parse(
-            message.replace('__PIXELGRID_INSPECT__', ''),
-          ) as InspectPayload
+          const marker = '__PIXELGRID_INSPECT__'
+          const raw = message.slice(message.indexOf(marker) + marker.length)
+          const info = JSON.parse(raw) as InspectPayload
           setInspectInfo(info)
           setFocusedPane(pane.id)
         } catch {
@@ -222,39 +292,16 @@ export function Pane({ pane, compact = false }: PaneProps) {
         return
       }
 
-      if (!tools.syncEnabled) return
-      if (!message.startsWith('__PIXELGRID__')) return
-      try {
-        const payload = JSON.parse(message.replace('__PIXELGRID__', '')) as {
-          channel: string
-          payload: Record<string, number | string>
-        }
-        if (payload.channel === 'pixelgrid-scroll' && tools.syncScroll) {
-          forEachWebview((_id, other) => {
-            void safeExecuteJavaScript(
-              other,
-              getApplyScrollScript(
-                Number(payload.payload.ratioX),
-                Number(payload.payload.ratioY),
-              ),
-            )
-          }, pane.id)
-        }
-        if (payload.channel === 'pixelgrid-pointer' && tools.syncClick) {
-          forEachWebview((_id, other) => {
-            void safeExecuteJavaScript(
-              other,
-              getApplyPointerScript(
-                payload.payload.type as 'click' | 'mousemove',
-                Number(payload.payload.ratioX),
-                Number(payload.payload.ratioY),
-              ),
-            )
-          }, pane.id)
-        }
-      } catch {
-        // ignore
-      }
+      const syncMsg = parseSyncConsoleMessage(message)
+      if (syncMsg) applySyncMessage(syncMsg)
+    }
+
+    const onIpcMessage = (event: Event & Record<string, unknown>) => {
+      const channel = typeof event.channel === 'string' ? event.channel : ''
+      if (channel !== 'pixelgrid-bridge') return
+      const args = Array.isArray(event.args) ? event.args : []
+      const syncMsg = parseSyncBridgeArgs(args)
+      if (syncMsg) applySyncMessage(syncMsg)
     }
 
     webview.addEventListener('dom-ready', onDomReady)
@@ -264,6 +311,7 @@ export function Pane({ pane, compact = false }: PaneProps) {
     webview.addEventListener('did-navigate-in-page', onNavigate)
     webview.addEventListener('did-fail-load', onFail)
     webview.addEventListener('console-message', onConsoleMessage)
+    webview.addEventListener('ipc-message', onIpcMessage)
 
     // Initial lock in case the element is already attached.
     lockSize()
@@ -277,11 +325,14 @@ export function Pane({ pane, compact = false }: PaneProps) {
       webview.removeEventListener('did-navigate-in-page', onNavigate)
       webview.removeEventListener('did-fail-load', onFail)
       webview.removeEventListener('console-message', onConsoleMessage)
+      webview.removeEventListener('ipc-message', onIpcMessage)
       registerWebview(pane.id, null)
     }
   }, [
+    guestPreloadAttr,
     pane.id,
     pane.darkMode,
+    preloadReady,
     setFocusedPane,
     setInspectInfo,
     setLoadError,
@@ -383,26 +434,32 @@ export function Pane({ pane, compact = false }: PaneProps) {
       }}
     >
       <div className="viewport-scale" style={scaleWrapStyle}>
-        <webview
-          ref={(node: HTMLWebViewElement | null) => {
-            const el = node as unknown as WebviewEl | null
-            webviewRef.current = el
-            if (!el) {
-              readyRef.current = false
-              return
-            }
-            lockWebviewSize(el, viewWidth, viewHeight)
-          }}
-          src={state.url}
-          className="pane-webview"
-          {...({
-            width: viewWidth,
-            height: viewHeight,
-          } as Record<string, number>)}
-          style={webviewStyle}
-          allowpopups={'true' as unknown as boolean}
-          webpreferences="contextIsolation=yes"
-        />
+        {preloadReady ? (
+          <webview
+            ref={(node: HTMLWebViewElement | null) => {
+              const el = node as unknown as WebviewEl | null
+              webviewRef.current = el
+              if (!el) {
+                readyRef.current = false
+                return
+              }
+              if (guestPreloadAttr) {
+                el.setAttribute('preload', guestPreloadAttr)
+              }
+              lockWebviewSize(el, viewWidth, viewHeight)
+            }}
+            src={state.url}
+            className="pane-webview"
+            {...({
+              width: viewWidth,
+              height: viewHeight,
+              ...(guestPreloadAttr ? { preload: guestPreloadAttr } : {}),
+            } as Record<string, number | string>)}
+            style={webviewStyle}
+            allowpopups={'true' as unknown as boolean}
+            webpreferences="contextIsolation=yes"
+          />
+        ) : null}
         {!compact && <ImageOverlayLayer pane={pane} />}
       </div>
     </div>
