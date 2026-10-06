@@ -9,7 +9,7 @@
       <stop offset="100%" stop-color="#6a6d74"/>
     </linearGradient>
   </defs>
-  <rect width="128" height="128" rx="28" fill="url(#bg)"/>
+  <rect width="128" height="128" rx="40" fill="url(#bg)"/>
   <!-- phone -->
   <rect x="18" y="28" width="26" height="72" rx="6" fill="url(#metal)"/>
   <rect x="21" y="34" width="20" height="58" rx="3" fill="#0c0d10"/>
