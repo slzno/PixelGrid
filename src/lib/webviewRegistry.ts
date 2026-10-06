@@ -1,8 +1,36 @@
-import type { WebviewTag } from '../vite-env'
+type NativeImageLike = {
+  toDataURL(): string
+  toPNG(): Buffer
+}
 
-const registry = new Map<string, WebviewTag>()
+type WebviewEl = HTMLElement & {
+  src: string
+  getURL(): string
+  canGoBack(): boolean
+  canGoForward(): boolean
+  goBack(): void
+  goForward(): void
+  reload(): void
+  loadURL(url: string): Promise<void>
+  capturePage(): Promise<NativeImageLike>
+  setZoomFactor(factor: number): void
+  getZoomFactor(): number
+  executeJavaScript<T = unknown>(code: string, userGesture?: boolean): Promise<T>
+  addEventListener(
+    type: string,
+    listener: (event: Event & Record<string, unknown>) => void,
+    options?: boolean | AddEventListenerOptions,
+  ): void
+  removeEventListener(
+    type: string,
+    listener: (event: Event & Record<string, unknown>) => void,
+    options?: boolean | EventListenerOptions,
+  ): void
+}
 
-export function registerWebview(id: string, webview: WebviewTag | null) {
+const registry = new Map<string, WebviewEl>()
+
+export function registerWebview(id: string, webview: WebviewEl | null) {
   if (!webview) {
     registry.delete(id)
     return
@@ -19,7 +47,7 @@ export function getAllWebviews() {
 }
 
 export function forEachWebview(
-  callback: (id: string, webview: WebviewTag) => void,
+  callback: (id: string, webview: WebviewEl) => void,
   exceptId?: string,
 ) {
   for (const [id, webview] of registry) {
@@ -27,3 +55,14 @@ export function forEachWebview(
     callback(id, webview)
   }
 }
+
+/** executeJavaScript throws sync if webview is not dom-ready — never call it bare. */
+export function safeExecuteJavaScript(webview: WebviewEl, code: string) {
+  try {
+    return webview.executeJavaScript(code).catch(() => undefined)
+  } catch {
+    return Promise.resolve(undefined)
+  }
+}
+
+export type { WebviewEl }

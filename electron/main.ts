@@ -1,23 +1,12 @@
-import { app, BrowserWindow } from 'electron'
-import { createRequire } from 'node:module'
+import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import { fileURLToPath } from 'node:url'
+import fs from 'node:fs/promises'
 import path from 'node:path'
 
-const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-// The built directory structure
-//
-// ├─┬─┬ dist
-// │ │ └── index.html
-// │ │
-// │ ├─┬ dist-electron
-// │ │ ├── main.js
-// │ │ └── preload.mjs
-// │
 process.env.APP_ROOT = path.join(__dirname, '..')
 
-// 🚧 Use ['ENV_NAME'] avoid vite:define plugin - Vite@2.x
 export const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
 export const MAIN_DIST = path.join(process.env.APP_ROOT, 'dist-electron')
 export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist')
@@ -57,6 +46,31 @@ function createWindow() {
     win.loadFile(path.join(RENDERER_DIST, 'index.html'))
   }
 }
+
+ipcMain.handle(
+  'pixelgrid:save-screenshot',
+  async (_event, dataUrl: string) => {
+    try {
+      if (!win) return { ok: false, error: 'No window' }
+      const result = await dialog.showSaveDialog(win, {
+        title: 'Save screenshot',
+        defaultPath: `pixelgrid-${Date.now()}.png`,
+        filters: [{ name: 'PNG', extensions: ['png'] }],
+      })
+      if (result.canceled || !result.filePath) {
+        return { ok: false, canceled: true }
+      }
+      const base64 = dataUrl.replace(/^data:image\/png;base64,/, '')
+      await fs.writeFile(result.filePath, Buffer.from(base64, 'base64'))
+      return { ok: true, path: result.filePath }
+    } catch (error) {
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : 'Save failed',
+      }
+    }
+  },
+)
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {

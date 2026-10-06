@@ -11,6 +11,7 @@ export type SyncPointerPayload = {
   ratioY: number
 }
 
+// Guest pages communicate via console-message events on <webview>.
 const SCROLL_SCRIPT = `
 (() => {
   if (window.__pixelgridSyncInstalled) return;
@@ -19,7 +20,7 @@ const SCROLL_SCRIPT = `
 
   const post = (channel, payload) => {
     try {
-      window.postMessage({ channel, payload, __pixelgrid: true }, '*');
+      console.log('__PIXELGRID__' + JSON.stringify({ channel, payload }));
     } catch (_) {}
   };
 

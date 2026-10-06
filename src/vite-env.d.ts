@@ -1,5 +1,7 @@
 /// <reference types="vite/client" />
 
+import type { CSSProperties, DetailedHTMLProps, HTMLAttributes } from 'react'
+
 interface WebviewTag extends HTMLElement {
   src: string
   partition?: string
@@ -31,30 +33,34 @@ interface WebviewTag extends HTMLElement {
   ): void
 }
 
-declare namespace JSX {
-  interface IntrinsicElements {
-    webview: React.DetailedHTMLProps<
-      React.HTMLAttributes<WebviewTag> & {
-        src?: string
-        partition?: string
-        allowpopups?: string | boolean
-        useragent?: string
-        webpreferences?: string
-        style?: React.CSSProperties
-      },
-      WebviewTag
-    >
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      webview: DetailedHTMLProps<
+        HTMLAttributes<WebviewTag> & {
+          src?: string
+          partition?: string
+          allowpopups?: boolean | string
+          useragent?: string
+          webpreferences?: string
+          style?: CSSProperties
+        },
+        WebviewTag
+      >
+    }
+  }
+
+  interface Window {
+    ipcRenderer: {
+      on: (
+        channel: string,
+        listener: (event: unknown, ...args: unknown[]) => void,
+      ) => unknown
+      off: (...args: unknown[]) => unknown
+      send: (...args: unknown[]) => void
+      invoke: (...args: unknown[]) => Promise<unknown>
+    }
   }
 }
 
-interface Window {
-  ipcRenderer: {
-    on: (
-      channel: string,
-      listener: (event: unknown, ...args: unknown[]) => void,
-    ) => unknown
-    off: (...args: unknown[]) => unknown
-    send: (...args: unknown[]) => void
-    invoke: (...args: unknown[]) => Promise<unknown>
-  }
-}
+export {}
