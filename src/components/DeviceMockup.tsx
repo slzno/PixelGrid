@@ -38,116 +38,88 @@ export function DeviceMockup({
   }
   const radius = Math.max(6, Math.round(spec.radius * scale))
   const screenRadius = Math.max(3, Math.round(spec.screenRadius * scale))
-  const showPhoneChrome = spec.kind === 'phone'
 
   return (
     <div
       className={`device-mockup kind-${spec.kind}`}
       style={{ width: outerW }}
     >
-      <div className="device-mockup-stage">
+      <div
+        className="device-mockup-frame"
+        style={{
+          width: frameW,
+          height: frameH,
+          borderRadius: radius,
+          paddingTop: pad.top,
+          paddingRight: pad.right,
+          paddingBottom: pad.bottom,
+          paddingLeft: pad.left,
+        }}
+      >
+        {spec.chrome === 'island' && (
+          <span
+            className="device-mockup-island"
+            style={{
+              top: Math.max(4, Math.round(pad.top * 0.3)),
+              width: Math.round(Math.min(screenW * 0.28, 96 * scale)),
+              height: Math.round(Math.max(7, 18 * scale * 0.55)),
+            }}
+            aria-hidden
+          />
+        )}
+        {spec.chrome === 'pill' && (
+          <span
+            className="device-mockup-pill"
+            style={{
+              top: Math.max(3, Math.round(pad.top * 0.28)),
+              width: Math.round(Math.max(12, 44 * scale * 0.45)),
+              height: Math.round(Math.max(5, 12 * scale * 0.4)),
+            }}
+            aria-hidden
+          />
+        )}
+        {spec.chrome === 'camera' && (
+          <span
+            className="device-mockup-camera"
+            style={{
+              top: Math.max(3, Math.round(pad.top * 0.36)),
+              width: Math.round(Math.max(5, 8 * scale)),
+              height: Math.round(Math.max(5, 8 * scale)),
+            }}
+            aria-hidden
+          />
+        )}
+
         <div
-          className="device-mockup-frame"
+          className="device-mockup-screen"
           style={{
-            width: frameW,
-            height: frameH,
-            borderRadius: radius,
-            paddingTop: pad.top,
-            paddingRight: pad.right,
-            paddingBottom: pad.bottom,
-            paddingLeft: pad.left,
+            width: screenW,
+            height: screenH,
+            borderRadius: screenRadius,
           }}
         >
-          {showPhoneChrome && (
-            <>
-              <span className="device-mockup-btn power" aria-hidden />
-              <span className="device-mockup-btn vol-up" aria-hidden />
-              <span className="device-mockup-btn vol-down" aria-hidden />
-            </>
-          )}
-
-          {spec.chrome === 'island' && (
-            <span
-              className="device-mockup-island"
-              style={{
-                top: Math.max(5, Math.round(pad.top * 0.28)),
-                width: Math.round(Math.min(screenW * 0.34, 110 * scale)),
-                height: Math.round(Math.max(9, 24 * scale * 0.55)),
-                borderRadius: 999,
-              }}
-              aria-hidden
-            />
-          )}
-          {spec.chrome === 'pill' && (
-            <span
-              className="device-mockup-pill"
-              style={{
-                top: Math.max(4, Math.round(pad.top * 0.24)),
-                width: Math.round(Math.max(16, 64 * scale * 0.5)),
-                height: Math.round(Math.max(6, 16 * scale * 0.42)),
-                borderRadius: 999,
-              }}
-              aria-hidden
-            />
-          )}
-          {spec.chrome === 'camera' && (
-            <span
-              className="device-mockup-camera"
-              style={{
-                top: Math.max(4, Math.round(pad.top * 0.34)),
-                width: Math.round(Math.max(6, 10 * scale)),
-                height: Math.round(Math.max(6, 10 * scale)),
-              }}
-              aria-hidden
-            />
-          )}
-
-          <div
-            className="device-mockup-screen"
-            style={{
-              width: screenW,
-              height: screenH,
-              borderRadius: screenRadius,
-            }}
-          >
-            {children}
-            {showPhoneChrome && (
-              <span
-                className="device-mockup-home"
-                style={{
-                  width: Math.round(Math.min(screenW * 0.32, 120 * scale)),
-                  height: Math.round(Math.max(3, 5 * scale)),
-                  bottom: Math.round(Math.max(4, 10 * scale)),
-                }}
-                aria-hidden
-              />
-            )}
-          </div>
+          {children}
         </div>
-
-        {spec.kind === 'laptop' && baseH > 0 && (
-          <div
-            className="device-mockup-laptop-base"
-            style={{ width: baseW, height: baseH }}
-            aria-hidden
-          >
-            <span className="device-mockup-laptop-lip" />
-          </div>
-        )}
-
-        {spec.kind === 'desktop' && baseH > 0 && (
-          <div
-            className="device-mockup-desktop-stand"
-            style={{ width: baseW, height: baseH }}
-            aria-hidden
-          >
-            <span className="device-mockup-desktop-neck" />
-            <span className="device-mockup-desktop-foot" />
-          </div>
-        )}
       </div>
 
-      <div className="device-mockup-shadow" aria-hidden />
+      {spec.kind === 'laptop' && baseH > 0 && (
+        <div
+          className="device-mockup-laptop-base"
+          style={{ width: baseW, height: baseH }}
+          aria-hidden
+        />
+      )}
+
+      {spec.kind === 'desktop' && baseH > 0 && (
+        <div
+          className="device-mockup-desktop-stand"
+          style={{ width: baseW, height: baseH }}
+          aria-hidden
+        >
+          <span className="device-mockup-desktop-neck" />
+          <span className="device-mockup-desktop-foot" />
+        </div>
+      )}
     </div>
   )
 }
