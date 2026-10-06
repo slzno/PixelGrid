@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { type FormEvent } from 'react'
 import {
   ArrowLeft,
   ArrowRight,
@@ -15,12 +15,21 @@ import {
   Settings,
   User,
 } from 'lucide-react'
-import { ADD_PANE_PRESETS, getPresetById } from '../data/devicePresets'
-import { forEachWebview, getAllWebviews } from '../lib/webviewRegistry'
-import { formatZoomLabel } from '../lib/zoom'
-import { capturePaneScreenshot } from '../lib/screenshot'
-import type { LayoutMode } from '../store/appState'
-import { useAppStore } from '../store/useAppStore'
+import { getAddPaneGroups } from '@/data/devicePresets'
+import { forEachWebview, getAllWebviews } from '@/lib/webviewRegistry'
+import { formatZoomLabel } from '@/lib/zoom'
+import { capturePaneScreenshot } from '@/lib/screenshot'
+import type { LayoutMode } from '@/store/appState'
+import { useAppStore } from '@/store/useAppStore'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 const LAYOUTS: { id: LayoutMode; label: string; icon: typeof Columns2 }[] = [
   { id: 'horizontal', label: 'Horizontal', icon: Columns2 },
@@ -42,23 +51,6 @@ export function Toolbar() {
     setStatusMessage,
     setFocusedPane,
   } = useAppStore()
-
-  const [addOpen, setAddOpen] = useState(false)
-  const [layoutOpen, setLayoutOpen] = useState(false)
-  const addRef = useRef<HTMLDivElement>(null)
-  const layoutRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const onDoc = (event: MouseEvent) => {
-      const target = event.target as Node
-      if (addRef.current && !addRef.current.contains(target)) setAddOpen(false)
-      if (layoutRef.current && !layoutRef.current.contains(target)) {
-        setLayoutOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', onDoc)
-    return () => document.removeEventListener('mousedown', onDoc)
-  }, [])
 
   const goBack = () => {
     forEachWebview((_id, webview) => {
@@ -107,6 +99,7 @@ export function Toolbar() {
 
   const canNav = getAllWebviews().length > 0
   const zoomPct = Math.round(state.zoomMode * 100)
+  const addGroups = getAddPaneGroups()
 
   return (
     <header className="topbar">
@@ -156,40 +149,37 @@ export function Toolbar() {
 
       <div className="topbar-right">
         <div className="topbar-tools">
-          <div className="topbar-menu" ref={layoutRef}>
-            <button
-              type="button"
-              className={`topbar-icon${layoutOpen ? ' active' : ''}`}
-              title="Layout"
-              aria-label="Layout"
-              onClick={() => setLayoutOpen((open) => !open)}
-            >
-              <Columns2 size={16} strokeWidth={1.75} />
-            </button>
-            {layoutOpen && (
-              <div className="topbar-dropdown">
-                {LAYOUTS.map((option) => {
-                  const Icon = option.icon
-                  return (
-                    <button
-                      key={option.id}
-                      type="button"
-                      className={
-                        state.layout === option.id ? 'active' : undefined
-                      }
-                      onClick={() => {
-                        setLayout(option.id)
-                        setLayoutOpen(false)
-                      }}
-                    >
-                      <Icon size={14} strokeWidth={1.75} />
-                      {option.label}
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="topbar-icon"
+                title="Layout"
+                aria-label="Layout"
+              >
+                <Columns2 size={16} strokeWidth={1.75} />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuLabel>Layout</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {LAYOUTS.map((option) => {
+                const Icon = option.icon
+                return (
+                  <DropdownMenuItem
+                    key={option.id}
+                    onClick={() => setLayout(option.id)}
+                    className={
+                      state.layout === option.id ? 'bg-accent' : undefined
+                    }
+                  >
+                    <Icon size={14} strokeWidth={1.75} className="mr-2" />
+                    {option.label}
+                  </DropdownMenuItem>
+                )
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <button
             type="button"
@@ -277,40 +267,41 @@ export function Toolbar() {
           <Settings size={16} strokeWidth={1.75} />
         </button>
 
-        <div className="topbar-menu" ref={addRef}>
-          <button
-            type="button"
-            className={`topbar-icon add-pane-btn${addOpen ? ' active' : ''}`}
-            title="Agregar panel"
-            aria-label="Agregar panel"
-            onClick={() => setAddOpen((open) => !open)}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="topbar-icon add-pane-btn"
+              title="Agregar panel"
+              aria-label="Agregar panel"
+            >
+              <Plus size={16} strokeWidth={1.75} />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            className="max-h-[min(420px,70vh)] w-[280px] overflow-y-auto"
           >
-            <Plus size={16} strokeWidth={1.75} />
-          </button>
-          {addOpen && (
-            <div className="topbar-dropdown add-dropdown">
-              {ADD_PANE_PRESETS.map((id) => {
-                const preset = getPresetById(id)
-                if (!preset) return null
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => {
-                      addPane(id)
-                      setAddOpen(false)
-                    }}
+            {addGroups.map((group, index) => (
+              <DropdownMenuGroup key={group.id}>
+                {index > 0 && <DropdownMenuSeparator />}
+                <DropdownMenuLabel>{group.label}</DropdownMenuLabel>
+                {group.presets.map((preset) => (
+                  <DropdownMenuItem
+                    key={preset.id}
+                    onClick={() => addPane(preset.id)}
+                    className="justify-between gap-3"
                   >
-                    <span>{preset.name}</span>
-                    <span className="muted">
+                    <span className="truncate">{preset.name}</span>
+                    <span className="shrink-0 font-mono text-[11px] text-muted-foreground">
                       {preset.width}×{preset.height}
                     </span>
-                  </button>
-                )
-              })}
-            </div>
-          )}
-        </div>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuGroup>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   )

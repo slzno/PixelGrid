@@ -1,28 +1,17 @@
-import { useEffect, useRef, useState } from 'react'
-import {
-  Camera,
-  Code2,
-  Layers,
-  MonitorSmartphone,
-  Moon,
-  RotateCw,
-} from 'lucide-react'
-import { DEVICE_PRESETS } from '../data/devicePresets'
-import { capturePaneScreenshot } from '../lib/screenshot'
-import type { Pane } from '../store/appState'
-import { useAppStore } from '../store/useAppStore'
+import { useEffect, useRef } from 'react'
+import { Camera, Code2, Layers, Moon, RotateCw, X } from 'lucide-react'
+import { DeviceSelect } from '@/components/DeviceSelect'
+import { capturePaneScreenshot } from '@/lib/screenshot'
+import type { Pane } from '@/store/appState'
+import { useAppStore } from '@/store/useAppStore'
 
 type PaneToolbarProps = {
   pane: Pane
   width: number
-  /** Wide panes hide this row until hover (Polypane behavior). */
-  hoverOnly?: boolean
 }
 
-export function PaneToolbar({ pane, width, hoverOnly = false }: PaneToolbarProps) {
+export function PaneToolbar({ pane, width }: PaneToolbarProps) {
   const fileRef = useRef<HTMLInputElement>(null)
-  const selectRef = useRef<HTMLSelectElement>(null)
-  const [menuOpen, setMenuOpen] = useState(false)
   const {
     state,
     rotatePane,
@@ -34,6 +23,7 @@ export function PaneToolbar({ pane, width, hoverOnly = false }: PaneToolbarProps
     setFocusedPane,
     setStatusMessage,
     setSidePanel,
+    removePane,
   } = useAppStore()
 
   useEffect(() => {
@@ -75,10 +65,7 @@ export function PaneToolbar({ pane, width, hoverOnly = false }: PaneToolbarProps
   }
 
   return (
-    <div
-      className={`pane-icon-row${hoverOnly ? ' hover-only' : ''}`}
-      style={{ width }}
-    >
+    <div className="pane-icon-row" style={{ width }}>
       <div className="pane-icon-group">
         <button
           type="button"
@@ -145,37 +132,16 @@ export function PaneToolbar({ pane, width, hoverOnly = false }: PaneToolbarProps
 
       <span className="pane-icon-sep" aria-hidden />
 
-      <div className="pane-icon-group device-picker">
-        <button
-          type="button"
-          className={`pane-icon-btn${menuOpen ? ' active' : ''}`}
-          title="Selector de dispositivo"
-          aria-label="Selector de dispositivo"
-          onClick={(event) => {
-            event.stopPropagation()
-            setMenuOpen((open) => !open)
-            selectRef.current?.focus()
-          }}
-        >
-          <MonitorSmartphone size={18} strokeWidth={1.75} />
-        </button>
-        <select
-          ref={selectRef}
-          className="pane-device-native"
+      <div
+        className="pane-icon-group device-picker"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <DeviceSelect
+          compact
           value={pane.presetId ?? 'freeform'}
-          aria-label="Dispositivo"
-          onClick={(event) => event.stopPropagation()}
-          onChange={(event) => {
-            applyPreset(pane.id, event.target.value)
-            setMenuOpen(false)
-          }}
-        >
-          {DEVICE_PRESETS.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.name} ({item.width}×{item.height})
-            </option>
-          ))}
-        </select>
+          onValueChange={(presetId) => applyPreset(pane.id, presetId)}
+          className="pane-icon-btn"
+        />
       </div>
 
       <span className="pane-icon-sep" aria-hidden />
@@ -195,6 +161,24 @@ export function PaneToolbar({ pane, width, hoverOnly = false }: PaneToolbarProps
           }}
         >
           <Code2 size={18} strokeWidth={1.75} />
+        </button>
+      </div>
+
+      <span className="pane-icon-sep" aria-hidden />
+
+      <div className="pane-icon-group">
+        <button
+          type="button"
+          className="pane-icon-btn pane-icon-remove"
+          title="Quitar panel"
+          aria-label="Quitar panel"
+          disabled={state.panes.length <= 1}
+          onClick={(event) => {
+            event.stopPropagation()
+            removePane(pane.id)
+          }}
+        >
+          <X size={18} strokeWidth={1.75} />
         </button>
       </div>
 

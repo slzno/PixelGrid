@@ -1,1 +1,32 @@
-/* Global resets live in styles/app.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 225 8% 12%;
+    --foreground: 220 6% 80%;
+    --card: 225 8% 16%;
+    --card-foreground: 220 6% 80%;
+    --popover: 225 8% 17%;
+    --popover-foreground: 220 6% 90%;
+    --primary: 142 71% 36%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 225 8% 20%;
+    --secondary-foreground: 220 6% 80%;
+    --muted: 225 8% 20%;
+    --muted-foreground: 220 4% 55%;
+    --accent: 225 8% 22%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 225 8% 24%;
+    --input: 225 8% 24%;
+    --ring: 142 71% 36%;
+    --radius: 0.5rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+}

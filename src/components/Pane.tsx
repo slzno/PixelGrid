@@ -70,8 +70,6 @@ export function Pane({ pane, compact = false }: PaneProps) {
   const isInspecting = pane.activeTool === 'inspect'
   const preset = getPresetById(pane.presetId ?? '')
   const form = preset?.form ?? 'freeform'
-  const hoverOnlyTools = !compact && (form === 'laptop' || form === 'desktop' || viewWidth >= 700)
-
   useEffect(() => {
     const webview = webviewRef.current
     if (!webview) return
@@ -320,13 +318,7 @@ export function Pane({ pane, compact = false }: PaneProps) {
       style={{ width: clipWidth }}
       onClick={() => setFocusedPane(pane.id)}
     >
-      {!compact && (
-        <PaneToolbar
-          pane={pane}
-          width={clipWidth}
-          hoverOnly={hoverOnlyTools}
-        />
-      )}
+      {!compact && <PaneToolbar pane={pane} width={clipWidth} />}
 
       <div className="pane-label-row" style={{ width: clipWidth }}>
         <div className="pane-label-name">
