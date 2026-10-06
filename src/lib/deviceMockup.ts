@@ -55,12 +55,12 @@ export function getMockupSpec(
     const isIphone = category === 'iphone'
     return {
       kind,
-      top: 14,
-      right: 11,
-      bottom: 14,
-      left: 11,
-      radius: 40,
-      screenRadius: 30,
+      top: 24,
+      right: 16,
+      bottom: 24,
+      left: 16,
+      radius: 48,
+      screenRadius: 34,
       chrome: isIphone ? 'island' : 'pill',
     }
   }
@@ -68,12 +68,12 @@ export function getMockupSpec(
   if (kind === 'tablet') {
     return {
       kind,
-      top: 16,
-      right: 14,
-      bottom: 16,
-      left: 14,
-      radius: 28,
-      screenRadius: 12,
+      top: 26,
+      right: 22,
+      bottom: 26,
+      left: 22,
+      radius: 32,
+      screenRadius: 14,
       chrome: 'camera',
     }
   }
@@ -81,12 +81,12 @@ export function getMockupSpec(
   if (kind === 'laptop') {
     return {
       kind,
-      top: 18,
-      right: 12,
-      bottom: 12,
-      left: 12,
-      radius: 12,
-      screenRadius: 4,
+      top: 28,
+      right: 18,
+      bottom: 16,
+      left: 18,
+      radius: 14,
+      screenRadius: 6,
       chrome: 'camera',
     }
   }
@@ -94,13 +94,13 @@ export function getMockupSpec(
   if (kind === 'desktop') {
     return {
       kind,
-      top: 10,
-      right: 10,
-      bottom: 10,
-      left: 10,
-      radius: 10,
-      screenRadius: 2,
-      chrome: 'none',
+      top: 16,
+      right: 16,
+      bottom: 16,
+      left: 16,
+      radius: 12,
+      screenRadius: 4,
+      chrome: 'camera',
     }
   }
 
@@ -121,13 +121,13 @@ export function mockupOuterSize(
   const baseExtra =
     spec.kind === 'laptop'
       ? {
-          width: Math.round(frameW * 1.08),
-          height: Math.round(18 * scale),
+          width: Math.round(frameW * 1.12),
+          height: Math.round(28 * scale),
         }
       : spec.kind === 'desktop'
         ? {
-            width: Math.round(frameW * 0.42),
-            height: Math.round(28 * scale),
+            width: Math.round(frameW * 0.48),
+            height: Math.round(40 * scale),
           }
         : { width: 0, height: 0 }
 
