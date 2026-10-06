@@ -11,23 +11,83 @@ export type DevicePreset = {
   form?: DeviceForm
 }
 
+/** Default workspace order: Mobile → Tablet → Laptop. */
+export const DEFAULT_PANE_PRESET_IDS = [
+  'mobile-phone',
+  'small-tablet',
+  'laptop',
+] as const
+
+/** Presets shown in the "Add pane" menu. */
+export const ADD_PANE_PRESETS = [
+  'iphone-17-pro-max',
+  'ipad',
+  'desktop',
+  'freeform',
+] as const
+
 export const DEVICE_PRESETS: DevicePreset[] = [
   {
-    id: 'laptop-m',
-    name: 'Laptop-M',
-    width: 1366,
+    id: 'mobile-phone',
+    name: 'Mobile Phone',
+    width: 320,
+    height: 568,
+    platform: 'iOS',
+    ppi: 326,
+    form: 'phone',
+  },
+  {
+    id: 'small-tablet',
+    name: 'Small Tablet',
+    width: 500,
     height: 768,
-    platform: 'Windows',
-    ppi: 100,
+    platform: 'iPadOS',
+    ppi: 264,
+    form: 'tablet',
+  },
+  {
+    id: 'laptop',
+    name: 'Laptop',
+    width: 1280,
+    height: 800,
+    platform: 'Desktop',
+    ppi: 96,
     form: 'laptop',
   },
   {
-    id: 'pixel-8-pro',
-    name: 'Google Pixel 8 Pro',
-    width: 448,
-    height: 998,
-    platform: 'Android',
-    ppi: 489,
+    id: 'iphone-17-pro-max',
+    name: 'iPhone 17 Pro Max',
+    width: 440,
+    height: 956,
+    platform: 'iOS',
+    ppi: 460,
+    form: 'phone',
+  },
+  {
+    id: 'ipad',
+    name: 'iPad',
+    width: 820,
+    height: 1180,
+    platform: 'iPadOS',
+    ppi: 264,
+    form: 'tablet',
+  },
+  {
+    id: 'desktop',
+    name: 'Desktop',
+    width: 1920,
+    height: 1080,
+    platform: 'Desktop',
+    ppi: 96,
+    form: 'desktop',
+  },
+  {
+    id: 'iphone-16-pro',
+    name: 'iPhone 16 Pro',
+    width: 402,
+    height: 874,
+    platform: 'iOS',
+    ppi: 460,
     form: 'phone',
   },
   {
@@ -40,44 +100,8 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     form: 'phone',
   },
   {
-    id: 'iphone-14',
-    name: 'iPhone 14',
-    width: 390,
-    height: 844,
-    platform: 'iOS',
-    ppi: 460,
-    form: 'phone',
-  },
-  {
-    id: 'ipad',
-    name: 'iPad',
-    width: 768,
-    height: 1024,
-    platform: 'iPadOS',
-    ppi: 264,
-    form: 'tablet',
-  },
-  {
-    id: 'desktop-1280',
-    name: 'Desktop 1280',
-    width: 1280,
-    height: 800,
-    platform: 'Desktop',
-    ppi: 96,
-    form: 'desktop',
-  },
-  {
-    id: 'desktop-1440',
-    name: 'Desktop 1440',
-    width: 1440,
-    height: 900,
-    platform: 'Desktop',
-    ppi: 96,
-    form: 'desktop',
-  },
-  {
     id: 'freeform',
-    name: 'Freeform',
+    name: 'Custom size',
     width: 1024,
     height: 768,
     platform: 'Custom',
@@ -90,8 +114,12 @@ export function getPresetById(id: string): DevicePreset | undefined {
   return DEVICE_PRESETS.find((preset) => preset.id === id)
 }
 
-export function formatDeviceLabel(opts: {
-  name: string
+/** Label format: "320×568px" */
+export function formatSizeLabel(width: number, height: number) {
+  return `${Math.round(width)}×${Math.round(height)}px`
+}
+
+export function formatDeviceMeta(opts: {
   width: number
   height: number
   platform?: string
@@ -99,5 +127,5 @@ export function formatDeviceLabel(opts: {
 }) {
   const platform = opts.platform ?? 'Custom'
   const ppi = opts.ppi ?? 96
-  return `${opts.name} | ${platform} (${opts.width}x${opts.height}/${ppi}ppi)`
+  return `${platform} · ${opts.width}×${opts.height}/${ppi}ppi`
 }

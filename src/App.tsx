@@ -4,33 +4,12 @@ import { InspectPanel } from './components/tools/InspectPanel'
 import { AppStoreProvider, useAppStore } from './store/useAppStore'
 import './styles/app.css'
 
-function StatusBar() {
-  const { state } = useAppStore()
-  const inspecting = state.panes.some((pane) => pane.activeTool === 'inspect')
-  return (
-    <div className="status-bar">
-      <div>
-        {state.panes.length} pane{state.panes.length === 1 ? '' : 's'} · layout{' '}
-        {state.layout}
-        {state.syncEnabled ? ' · sync on' : ' · sync off'}
-        {inspecting ? ' · inspecting' : ''}
-      </div>
-      <div className={state.loadError ? 'error' : ''}>
-        {state.statusMessage
-          ? state.statusMessage
-          : state.loadError
-            ? `Load error: ${state.loadError}`
-            : state.url}
-      </div>
-    </div>
-  )
-}
-
 function Workspace() {
+  const { state } = useAppStore()
   return (
-    <div className="workspace">
+    <div className={`workspace${state.sidePanelOpen ? ' with-side' : ''}`}>
       <PaneGrid />
-      <InspectPanel />
+      {state.sidePanelOpen && <InspectPanel />}
     </div>
   )
 }
@@ -39,8 +18,18 @@ function AppShell() {
   return (
     <div className="app">
       <Toolbar />
-      <StatusBar />
       <Workspace />
+      <StatusToast />
+    </div>
+  )
+}
+
+function StatusToast() {
+  const { state } = useAppStore()
+  if (!state.statusMessage && !state.loadError) return null
+  return (
+    <div className={`status-toast${state.loadError ? ' error' : ''}`}>
+      {state.statusMessage || `Load error: ${state.loadError}`}
     </div>
   )
 }

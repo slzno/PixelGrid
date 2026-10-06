@@ -1,4 +1,4 @@
-import { ipcMain, dialog, app, BrowserWindow } from "electron";
+import { ipcMain, webContents, dialog, app, BrowserWindow } from "electron";
 import { fileURLToPath } from "node:url";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -35,6 +35,32 @@ function createWindow() {
     win.loadFile(path.join(RENDERER_DIST, "index.html"));
   }
 }
+ipcMain.handle(
+  "pixelgrid:emulate-viewport",
+  async (_event, payload) => {
+    try {
+      const wc = webContents.fromId(payload.webContentsId);
+      if (!wc || wc.isDestroyed()) return { ok: false, error: "Missing webContents" };
+      const width = Math.max(1, Math.round(payload.width));
+      const height = Math.max(1, Math.round(payload.height));
+      const mobile = height >= width;
+      wc.enableDeviceEmulation({
+        screenPosition: mobile ? "mobile" : "desktop",
+        screenSize: { width, height },
+        viewSize: { width, height },
+        viewPosition: { x: 0, y: 0 },
+        deviceScaleFactor: 1,
+        scale: 1
+      });
+      return { ok: true };
+    } catch (error) {
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : "Emulation failed"
+      };
+    }
+  }
+);
 ipcMain.handle(
   "pixelgrid:save-screenshot",
   async (_event, dataUrl) => {

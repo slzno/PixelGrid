@@ -15,7 +15,9 @@ type WebviewEl = HTMLElement & {
   capturePage(): Promise<NativeImageLike>
   setZoomFactor(factor: number): void
   getZoomFactor(): number
+  getWebContentsId(): number
   executeJavaScript<T = unknown>(code: string, userGesture?: boolean): Promise<T>
+  insertCSS(css: string): Promise<string>
   addEventListener(
     type: string,
     listener: (event: Event & Record<string, unknown>) => void,

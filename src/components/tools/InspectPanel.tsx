@@ -2,12 +2,15 @@ import { X } from 'lucide-react'
 import { useAppStore } from '../../store/useAppStore'
 
 export function InspectPanel() {
-  const { state, setPaneTool } = useAppStore()
+  const { state, setPaneTool, setSidePanel } = useAppStore()
   const pane =
     state.panes.find(
       (item) =>
         item.id === state.focusedPaneId && item.activeTool === 'inspect',
-    ) ?? state.panes.find((item) => item.activeTool === 'inspect')
+    ) ??
+    state.panes.find((item) => item.activeTool === 'inspect') ??
+    state.panes.find((item) => item.id === state.focusedPaneId) ??
+    state.panes[0]
 
   if (!pane) return null
 
@@ -20,7 +23,10 @@ export function InspectPanel() {
         <button
           type="button"
           className="icon-btn"
-          onClick={() => setPaneTool(pane.id, 'none')}
+          onClick={() => {
+            setPaneTool(pane.id, 'none')
+            setSidePanel(false)
+          }}
           aria-label="Close inspect"
         >
           <X size={15} strokeWidth={1.75} />

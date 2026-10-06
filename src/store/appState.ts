@@ -1,7 +1,15 @@
-import { DEVICE_PRESETS, getPresetById } from '../data/devicePresets'
+import {
+  DEFAULT_PANE_PRESET_IDS,
+  DEVICE_PRESETS,
+  getPresetById,
+} from '../data/devicePresets'
 import type { InspectPayload } from '../lib/toolsScripts'
+import { clampZoom } from '../lib/zoom'
 
 export type LayoutMode = 'horizontal' | 'vertical' | 'focus'
+
+/** Global zoom factor (25%–100%). Guest viewport stays at real CSS px. */
+export type ZoomMode = number
 
 export type PaneTool =
   | 'none'
@@ -10,15 +18,19 @@ export type PaneTool =
   | 'eyedropper'
   | 'sync'
   | 'inspect'
+  | 'dark'
 
 export type Pane = {
   id: string
   name: string
   width: number
   height: number
+  /** Legacy per-pane scale; visual zoom uses global zoomMode. */
   scale: number
   presetId?: string
+  starred: boolean
   activeTool: PaneTool
+  darkMode: boolean
   overlayImage: string | null
   overlayOpacity: number
   pickedColor: string | null
@@ -29,6 +41,7 @@ export type AppState = {
   draftUrl: string
   panes: Pane[]
   layout: LayoutMode
+  zoomMode: ZoomMode
   syncEnabled: boolean
   syncScroll: boolean
   syncClick: boolean
@@ -37,57 +50,15 @@ export type AppState = {
   designGridSize: number
   inspectInfo: InspectPayload | null
   statusMessage: string | null
+  sidePanelOpen: boolean
 }
 
-export type Action =
-  | { type: 'SET_DRAFT_URL'; draftUrl: string }
-  | { type: 'NAVIGATE'; url: string }
-  | { type: 'SET_URL_FROM_WEBVIEW'; url: string }
-  | { type: 'SET_LAYOUT'; layout: LayoutMode }
-  | { type: 'SET_SYNC'; syncEnabled: boolean }
-  | { type: 'SET_SYNC_SCROLL'; syncScroll: boolean }
-  | { type: 'SET_SYNC_CLICK'; syncClick: boolean }
-  | { type: 'SET_FOCUSED_PANE'; focusedPaneId: string | null }
-  | { type: 'TOGGLE_PANE_TOOL'; paneId: string; tool: Exclude<PaneTool, 'none'> }
-  | { type: 'SET_PANE_TOOL'; paneId: string; tool: PaneTool }
-  | {
-      type: 'SET_PANE_OVERLAY'
-      paneId: string
-      overlayImage: string | null
-      overlayOpacity?: number
-    }
-  | { type: 'SET_PANE_OVERLAY_OPACITY'; paneId: string; overlayOpacity: number }
-  | { type: 'SET_PANE_COLOR'; paneId: string; pickedColor: string | null }
-  | { type: 'ADD_PANE'; presetId?: string }
-  | { type: 'DUPLICATE_PANE'; paneId: string }
-  | { type: 'REMOVE_PANE'; paneId: string }
-  | {
-      type: 'UPDATE_PANE'
-      paneId: string
-      patch: Partial<
-        Pick<Pane, 'name' | 'width' | 'height' | 'scale' | 'presetId'>
-      >
-    }
-  | { type: 'APPLY_PRESET'; paneId: string; presetId: string }
-  | { type: 'SET_LOAD_ERROR'; loadError: string | null }
-  | { type: 'SET_DESIGN_GRID_SIZE'; designGridSize: number }
-  | { type: 'SET_INSPECT_INFO'; inspectInfo: InspectPayload | null }
-  | { type: 'SET_STATUS_MESSAGE'; statusMessage: string | null }
-  | { type: 'HYDRATE'; state: Partial<AppState> }
-
-export const STORAGE_KEY = 'pixelgrid-state-v3'
+export const STORAGE_KEY = 'pixelgrid-state-v8'
 export const DEFAULT_URL = 'https://example.com'
+export const TOPBAR_HEIGHT = 36
 
 function createId() {
   return `pane-${Math.random().toString(36).slice(2, 9)}`
-}
-
-function defaultScaleForPreset(presetId: string) {
-  const preset = getPresetById(presetId)
-  if (preset?.form === 'laptop' || preset?.form === 'desktop') return 0.7
-  if (preset?.form === 'phone') return 0.72
-  if (preset?.form === 'tablet') return 0.6
-  return 1
 }
 
 export function paneFromPreset(presetId: string): Pane {
@@ -97,9 +68,11 @@ export function paneFromPreset(presetId: string): Pane {
     name: preset.name,
     width: preset.width,
     height: preset.height,
-    scale: preset.scale ?? defaultScaleForPreset(preset.id),
+    scale: 1,
     presetId: preset.id,
+    starred: false,
     activeTool: 'none',
+    darkMode: false,
     overlayImage: null,
     overlayOpacity: 0.45,
     pickedColor: null,
@@ -110,19 +83,22 @@ function normalizePane(raw: Partial<Pane> & { id?: string }): Pane | null {
   if (!raw || typeof raw.id !== 'string') return null
   return {
     id: raw.id,
-    name: typeof raw.name === 'string' ? raw.name : 'Freeform',
+    name: typeof raw.name === 'string' ? raw.name : 'Custom size',
     width: typeof raw.width === 'number' ? raw.width : 1024,
     height: typeof raw.height === 'number' ? raw.height : 768,
     scale: typeof raw.scale === 'number' ? raw.scale : 1,
     presetId: typeof raw.presetId === 'string' ? raw.presetId : 'freeform',
+    starred: Boolean(raw.starred),
     activeTool:
       raw.activeTool === 'ruler' ||
       raw.activeTool === 'overlay' ||
       raw.activeTool === 'eyedropper' ||
       raw.activeTool === 'sync' ||
-      raw.activeTool === 'inspect'
+      raw.activeTool === 'inspect' ||
+      raw.activeTool === 'dark'
         ? raw.activeTool
         : 'none',
+    darkMode: Boolean(raw.darkMode),
     overlayImage: typeof raw.overlayImage === 'string' ? raw.overlayImage : null,
     overlayOpacity:
       typeof raw.overlayOpacity === 'number' ? raw.overlayOpacity : 0.45,
@@ -131,12 +107,13 @@ function normalizePane(raw: Partial<Pane> & { id?: string }): Pane | null {
 }
 
 export function createDefaultState(): AppState {
-  const panes = [paneFromPreset('laptop-m'), paneFromPreset('pixel-8-pro')]
+  const panes = DEFAULT_PANE_PRESET_IDS.map((id) => paneFromPreset(id))
   return {
     url: DEFAULT_URL,
     draftUrl: DEFAULT_URL,
     panes,
     layout: 'horizontal',
+    zoomMode: 1,
     syncEnabled: true,
     syncScroll: true,
     syncClick: true,
@@ -145,6 +122,7 @@ export function createDefaultState(): AppState {
     designGridSize: 8,
     inspectInfo: null,
     statusMessage: null,
+    sidePanelOpen: false,
   }
 }
 
@@ -167,6 +145,50 @@ function mapPane(
     ),
   }
 }
+
+export type Action =
+  | { type: 'SET_DRAFT_URL'; draftUrl: string }
+  | { type: 'NAVIGATE'; url: string }
+  | { type: 'SET_URL_FROM_WEBVIEW'; url: string }
+  | { type: 'SET_LAYOUT'; layout: LayoutMode }
+  | { type: 'SET_ZOOM_MODE'; zoomMode: ZoomMode }
+  | { type: 'ROTATE_PANE'; paneId: string }
+  | { type: 'SET_SYNC'; syncEnabled: boolean }
+  | { type: 'SET_SYNC_SCROLL'; syncScroll: boolean }
+  | { type: 'SET_SYNC_CLICK'; syncClick: boolean }
+  | { type: 'SET_FOCUSED_PANE'; focusedPaneId: string | null }
+  | { type: 'TOGGLE_PANE_TOOL'; paneId: string; tool: Exclude<PaneTool, 'none'> }
+  | { type: 'SET_PANE_TOOL'; paneId: string; tool: PaneTool }
+  | { type: 'TOGGLE_PANE_DARK'; paneId: string }
+  | {
+      type: 'SET_PANE_OVERLAY'
+      paneId: string
+      overlayImage: string | null
+      overlayOpacity?: number
+    }
+  | { type: 'SET_PANE_OVERLAY_OPACITY'; paneId: string; overlayOpacity: number }
+  | { type: 'SET_PANE_COLOR'; paneId: string; pickedColor: string | null }
+  | { type: 'ADD_PANE'; presetId?: string }
+  | { type: 'DUPLICATE_PANE'; paneId: string }
+  | { type: 'REMOVE_PANE'; paneId: string }
+  | {
+      type: 'UPDATE_PANE'
+      paneId: string
+      patch: Partial<
+        Pick<
+          Pane,
+          'name' | 'width' | 'height' | 'scale' | 'presetId' | 'starred'
+        >
+      >
+    }
+  | { type: 'TOGGLE_PANE_STAR'; paneId: string }
+  | { type: 'APPLY_PRESET'; paneId: string; presetId: string }
+  | { type: 'SET_LOAD_ERROR'; loadError: string | null }
+  | { type: 'SET_DESIGN_GRID_SIZE'; designGridSize: number }
+  | { type: 'SET_INSPECT_INFO'; inspectInfo: InspectPayload | null }
+  | { type: 'SET_STATUS_MESSAGE'; statusMessage: string | null }
+  | { type: 'SET_SIDE_PANEL'; sidePanelOpen: boolean }
+  | { type: 'HYDRATE'; state: Partial<AppState> }
 
 export function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
@@ -192,6 +214,14 @@ export function reducer(state: AppState, action: Action): AppState {
             ? state.focusedPaneId ?? state.panes[0]?.id ?? null
             : state.focusedPaneId,
       }
+    case 'SET_ZOOM_MODE':
+      return { ...state, zoomMode: clampZoom(action.zoomMode) }
+    case 'ROTATE_PANE':
+      return mapPane(state, action.paneId, (pane) => ({
+        ...pane,
+        width: pane.height,
+        height: pane.width,
+      }))
     case 'SET_SYNC':
       return { ...state, syncEnabled: action.syncEnabled }
     case 'SET_SYNC_SCROLL':
@@ -203,6 +233,12 @@ export function reducer(state: AppState, action: Action): AppState {
     case 'TOGGLE_PANE_TOOL': {
       const pane = state.panes.find((item) => item.id === action.paneId)
       if (!pane) return state
+      if (action.tool === 'dark') {
+        return mapPane(state, action.paneId, (item) => ({
+          ...item,
+          darkMode: !item.darkMode,
+        }))
+      }
       const nextTool = pane.activeTool === action.tool ? 'none' : action.tool
       return {
         ...mapPane(state, action.paneId, (item) => ({
@@ -216,6 +252,7 @@ export function reducer(state: AppState, action: Action): AppState {
               ? state.inspectInfo
               : null
             : state.inspectInfo,
+        sidePanelOpen: nextTool === 'inspect' ? true : state.sidePanelOpen,
       }
     }
     case 'SET_PANE_TOOL':
@@ -226,6 +263,11 @@ export function reducer(state: AppState, action: Action): AppState {
         })),
         focusedPaneId: action.paneId,
       }
+    case 'TOGGLE_PANE_DARK':
+      return mapPane(state, action.paneId, (pane) => ({
+        ...pane,
+        darkMode: !pane.darkMode,
+      }))
     case 'SET_PANE_OVERLAY':
       return mapPane(state, action.paneId, (pane) => ({
         ...pane,
@@ -282,6 +324,11 @@ export function reducer(state: AppState, action: Action): AppState {
         ...pane,
         ...action.patch,
       }))
+    case 'TOGGLE_PANE_STAR':
+      return mapPane(state, action.paneId, (pane) => ({
+        ...pane,
+        starred: !pane.starred,
+      }))
     case 'APPLY_PRESET': {
       const preset = getPresetById(action.presetId)
       if (!preset) return state
@@ -290,7 +337,7 @@ export function reducer(state: AppState, action: Action): AppState {
         name: preset.name,
         width: preset.width,
         height: preset.height,
-        scale: preset.scale ?? defaultScaleForPreset(preset.id),
+        scale: 1,
         presetId: preset.id,
       }))
     }
@@ -302,11 +349,17 @@ export function reducer(state: AppState, action: Action): AppState {
       return { ...state, inspectInfo: action.inspectInfo }
     case 'SET_STATUS_MESSAGE':
       return { ...state, statusMessage: action.statusMessage }
+    case 'SET_SIDE_PANEL':
+      return { ...state, sidePanelOpen: action.sidePanelOpen }
     case 'HYDRATE':
       return {
         ...state,
         ...action.state,
         draftUrl: action.state.url ?? action.state.draftUrl ?? state.draftUrl,
+        zoomMode:
+          typeof action.state.zoomMode === 'number'
+            ? clampZoom(action.state.zoomMode)
+            : state.zoomMode,
       }
     default:
       return state
@@ -333,6 +386,10 @@ export function loadPersistedState(): Partial<AppState> | null {
         parsed.layout === 'focus'
           ? parsed.layout
           : undefined,
+      zoomMode:
+        typeof parsed.zoomMode === 'number'
+          ? clampZoom(parsed.zoomMode)
+          : undefined,
       syncEnabled:
         typeof parsed.syncEnabled === 'boolean' ? parsed.syncEnabled : undefined,
       syncScroll:
@@ -344,7 +401,13 @@ export function loadPersistedState(): Partial<AppState> | null {
           ? parsed.focusedPaneId
           : undefined,
       designGridSize:
-        typeof parsed.designGridSize === 'number' ? parsed.designGridSize : undefined,
+        typeof parsed.designGridSize === 'number'
+          ? parsed.designGridSize
+          : undefined,
+      sidePanelOpen:
+        typeof parsed.sidePanelOpen === 'boolean'
+          ? parsed.sidePanelOpen
+          : undefined,
     }
   } catch {
     return null

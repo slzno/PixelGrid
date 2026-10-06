@@ -13,6 +13,7 @@ import {
   STORAGE_KEY,
   type Pane,
   type PaneTool,
+  type ZoomMode,
 } from './appState'
 import { AppStoreContext, type AppStoreValue } from './AppStoreContext'
 
@@ -47,6 +48,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         activeTool: 'none' as const,
       })),
       layout: state.layout,
+      zoomMode: state.zoomMode,
       syncEnabled: state.syncEnabled,
       syncScroll: state.syncScroll,
       syncClick: state.syncClick,
@@ -58,6 +60,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     state.url,
     state.panes,
     state.layout,
+    state.zoomMode,
     state.syncEnabled,
     state.syncScroll,
     state.syncClick,
@@ -82,6 +85,18 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
   const setLayout = useCallback((layout: AppStoreValue['state']['layout']) => {
     dispatch({ type: 'SET_LAYOUT', layout })
+  }, [])
+
+  const setZoomMode = useCallback((zoomMode: ZoomMode) => {
+    dispatch({ type: 'SET_ZOOM_MODE', zoomMode })
+  }, [])
+
+  const setSidePanel = useCallback((sidePanelOpen: boolean) => {
+    dispatch({ type: 'SET_SIDE_PANEL', sidePanelOpen })
+  }, [])
+
+  const togglePaneDark = useCallback((paneId: string) => {
+    dispatch({ type: 'TOGGLE_PANE_DARK', paneId })
   }, [])
 
   const setSyncEnabled = useCallback((syncEnabled: boolean) => {
@@ -149,15 +164,25 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'REMOVE_PANE', paneId })
   }, [])
 
+  const rotatePane = useCallback((paneId: string) => {
+    dispatch({ type: 'ROTATE_PANE', paneId })
+  }, [])
+
   const updatePane = useCallback(
     (
       paneId: string,
-      patch: Partial<Pick<Pane, 'name' | 'width' | 'height' | 'scale' | 'presetId'>>,
+      patch: Partial<
+        Pick<Pane, 'name' | 'width' | 'height' | 'scale' | 'presetId' | 'starred'>
+      >,
     ) => {
       dispatch({ type: 'UPDATE_PANE', paneId, patch })
     },
     [],
   )
+
+  const togglePaneStar = useCallback((paneId: string) => {
+    dispatch({ type: 'TOGGLE_PANE_STAR', paneId })
+  }, [])
 
   const applyPreset = useCallback((paneId: string, presetId: string) => {
     dispatch({ type: 'APPLY_PRESET', paneId, presetId })
@@ -186,24 +211,29 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       navigate,
       setUrlFromWebview,
       setLayout,
+      setZoomMode,
       setSyncEnabled,
       setSyncScroll,
       setSyncClick,
       setFocusedPane,
       togglePaneTool,
       setPaneTool,
+      togglePaneDark,
       setPaneOverlay,
       setPaneOverlayOpacity,
       setPaneColor,
       addPane,
       duplicatePane,
       removePane,
+      rotatePane,
       updatePane,
+      togglePaneStar,
       applyPreset,
       setLoadError,
       setDesignGridSize,
       setInspectInfo,
       setStatusMessage,
+      setSidePanel,
     }),
     [
       state,
@@ -211,24 +241,29 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       navigate,
       setUrlFromWebview,
       setLayout,
+      setZoomMode,
       setSyncEnabled,
       setSyncScroll,
       setSyncClick,
       setFocusedPane,
       togglePaneTool,
       setPaneTool,
+      togglePaneDark,
       setPaneOverlay,
       setPaneOverlayOpacity,
       setPaneColor,
       addPane,
       duplicatePane,
       removePane,
+      rotatePane,
       updatePane,
+      togglePaneStar,
       applyPreset,
       setLoadError,
       setDesignGridSize,
       setInspectInfo,
       setStatusMessage,
+      setSidePanel,
     ],
   )
 

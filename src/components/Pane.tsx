@@ -1,9 +1,6 @@
 import { useEffect, useRef, type CSSProperties } from 'react'
-import {
-  DEVICE_PRESETS,
-  formatDeviceLabel,
-  getPresetById,
-} from '../data/devicePresets'
+import { Circle } from 'lucide-react'
+import { getPresetById } from '../data/devicePresets'
 import {
   getApplyPointerScript,
   getApplyScrollScript,
@@ -19,11 +16,17 @@ import {
   safeExecuteJavaScript,
   type WebviewEl,
 } from '../lib/webviewRegistry'
+import { emulateWebviewViewport } from '../lib/webviewSize'
+import { clampZoom } from '../lib/zoom'
 import type { Pane as PaneModel } from '../store/appState'
 import { useAppStore } from '../store/useAppStore'
-import { PaneTools } from './PaneTools'
+import { PaneToolbar } from './PaneToolbar'
 import { ImageOverlayLayer } from './tools/ImageOverlayLayer'
-import { RulerOverlay } from './tools/RulerOverlay'
+
+const DARK_CSS = `
+html { color-scheme: dark !important; }
+html, body { background: #121212 !important; color: #e8e8e8 !important; }
+`
 
 type PaneProps = {
   pane: PaneModel
@@ -42,8 +45,6 @@ export function Pane({ pane, compact = false }: PaneProps) {
 
   const {
     state,
-    applyPreset,
-    updatePane,
     setFocusedPane,
     setUrlFromWebview,
     setLoadError,
@@ -58,19 +59,18 @@ export function Pane({ pane, compact = false }: PaneProps) {
     activeTool: pane.activeTool,
   }
 
-  const displayWidth = Math.round(pane.width * pane.scale)
-  const displayHeight = Math.round(pane.height * pane.scale)
+  const viewWidth = Math.max(1, Math.round(pane.width))
+  const viewHeight = Math.max(1, Math.round(pane.height))
+  const scale = compact
+    ? Math.min(0.28, clampZoom(state.zoomMode))
+    : clampZoom(state.zoomMode)
+  const clipWidth = Math.round(viewWidth * scale)
+  const clipHeight = Math.round(viewHeight * scale)
   const isFocused = state.focusedPaneId === pane.id
   const isInspecting = pane.activeTool === 'inspect'
   const preset = getPresetById(pane.presetId ?? '')
   const form = preset?.form ?? 'freeform'
-  const deviceLabel = formatDeviceLabel({
-    name: pane.name,
-    width: pane.width,
-    height: pane.height,
-    platform: preset?.platform,
-    ppi: preset?.ppi,
-  })
+  const hoverOnlyTools = !compact && (form === 'laptop' || form === 'desktop' || viewWidth >= 700)
 
   useEffect(() => {
     const webview = webviewRef.current
@@ -89,9 +89,33 @@ export function Pane({ pane, compact = false }: PaneProps) {
       )
     }
 
+    const applyDark = () => {
+      if (!readyRef.current) return
+      void safeExecuteJavaScript(
+        webview,
+        `(() => {
+          let el = document.getElementById('pixelgrid-dark');
+          if (${pane.darkMode ? 'true' : 'false'}) {
+            if (!el) {
+              el = document.createElement('style');
+              el.id = 'pixelgrid-dark';
+              document.documentElement.appendChild(el);
+            }
+            el.textContent = ${JSON.stringify(DARK_CSS)};
+          } else if (el) {
+            el.remove();
+          }
+        })()`,
+      )
+    }
+
     const onDomReady = () => {
       readyRef.current = true
+      webview.style.width = '100%'
+      webview.style.height = '100%'
+      void emulateWebviewViewport(webview, viewWidth, viewHeight)
       installGuestTools()
+      applyDark()
       setLoadError(null)
     }
 
@@ -102,9 +126,10 @@ export function Pane({ pane, compact = false }: PaneProps) {
           typeof event.url === 'string' ? event.url : webview.getURL()
         if (url) setUrlFromWebview(url)
       } catch {
-        // webview not ready
+        // not ready
       }
       installGuestTools()
+      applyDark()
     }
 
     const onFail = (event: Event & Record<string, unknown>) => {
@@ -178,7 +203,7 @@ export function Pane({ pane, compact = false }: PaneProps) {
           }, pane.id)
         }
       } catch {
-        // ignore malformed sync payloads
+        // ignore
       }
     }
 
@@ -199,11 +224,14 @@ export function Pane({ pane, compact = false }: PaneProps) {
     }
   }, [
     pane.id,
+    pane.darkMode,
     setFocusedPane,
     setInspectInfo,
     setLoadError,
     setPaneColor,
     setUrlFromWebview,
+    viewHeight,
+    viewWidth,
   ])
 
   useEffect(() => {
@@ -215,7 +243,7 @@ export function Pane({ pane, compact = false }: PaneProps) {
         void webview.loadURL(state.url)
       }
     } catch {
-      // not ready yet
+      // not ready
     }
   }, [state.url])
 
@@ -228,132 +256,131 @@ export function Pane({ pane, compact = false }: PaneProps) {
     )
   }, [compact, isInspecting])
 
+  useEffect(() => {
+    const webview = webviewRef.current
+    if (!webview) return
+    webview.style.width = '100%'
+    webview.style.height = '100%'
+    if (readyRef.current) {
+      void emulateWebviewViewport(webview, viewWidth, viewHeight)
+    }
+  }, [viewWidth, viewHeight, scale])
+
+  useEffect(() => {
+    const webview = webviewRef.current
+    if (!webview || !readyRef.current) return
+    void safeExecuteJavaScript(
+      webview,
+      `(() => {
+        let el = document.getElementById('pixelgrid-dark');
+        if (${pane.darkMode ? 'true' : 'false'}) {
+          if (!el) {
+            el = document.createElement('style');
+            el.id = 'pixelgrid-dark';
+            document.documentElement.appendChild(el);
+          }
+          el.textContent = ${JSON.stringify(DARK_CSS)};
+        } else if (el) {
+          el.remove();
+        }
+      })()`,
+    )
+  }, [pane.darkMode])
+
+  const scaleWrapStyle: CSSProperties = {
+    width: viewWidth,
+    height: viewHeight,
+    transform: `scale(${scale})`,
+    transformOrigin: 'top left',
+  }
+
+  const webviewStyle: CSSProperties = {
+    width: '100%',
+    height: '100%',
+    display: 'block',
+    border: 0,
+    margin: 0,
+    padding: 0,
+    boxSizing: 'border-box',
+    background: '#fff',
+  }
+
   return (
     <article
-      className={`pane form-${form}${compact ? ' thumb' : ''}${
+      className={`device-pane form-${form}${compact ? ' thumb' : ''}${
         isFocused ? ' focused' : ''
       }${isInspecting ? ' inspecting' : ''}`}
+      style={{ width: clipWidth }}
       onClick={() => setFocusedPane(pane.id)}
     >
-      <div className="pane-header">
-        <label className="pane-device-select">
-          <select
-            value={pane.presetId ?? 'freeform'}
-            onChange={(event) => applyPreset(pane.id, event.target.value)}
-            aria-label="Device preset"
-            title={deviceLabel}
-          >
-            {DEVICE_PRESETS.map((item) => (
-              <option key={item.id} value={item.id}>
-                {formatDeviceLabel(item)}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        {!compact && (
-          <div className="pane-meta">
-            <input
-              className="size"
-              type="number"
-              min={200}
-              value={pane.width}
-              onChange={(event) =>
-                updatePane(pane.id, {
-                  width: Number(event.target.value) || pane.width,
-                  presetId: 'freeform',
-                  name: 'Freeform',
-                })
-              }
-              aria-label="Pane width"
-            />
-            <span>×</span>
-            <input
-              className="size"
-              type="number"
-              min={200}
-              value={pane.height}
-              onChange={(event) =>
-                updatePane(pane.id, {
-                  height: Number(event.target.value) || pane.height,
-                  presetId: 'freeform',
-                  name: 'Freeform',
-                })
-              }
-              aria-label="Pane height"
-            />
-            <input
-              className="scale"
-              type="number"
-              min={0.25}
-              max={2}
-              step={0.05}
-              value={pane.scale}
-              onChange={(event) =>
-                updatePane(pane.id, {
-                  scale: Number(event.target.value) || 1,
-                })
-              }
-              aria-label="Pane scale"
-              title="Scale"
-            />
-            <PaneTools pane={pane} />
-          </div>
-        )}
-      </div>
-
-      <div className={`device-shell form-${form}`}>
-        <div
-          className="pane-frame"
-          style={
-            {
-              width: displayWidth,
-              height: displayHeight,
-              '--pane-w': `${pane.width}px`,
-              '--pane-h': `${pane.height}px`,
-              '--pane-scale': String(pane.scale),
-            } as CSSProperties
-          }
-        >
-          {/*
-            Use CSS zoom (not transform) so Electron webviews keep a real
-            width×height viewport and still shrink visually without clipping.
-          */}
-          <webview
-            ref={(node) => {
-              webviewRef.current = node as unknown as WebviewEl | null
-              if (!node) readyRef.current = false
-            }}
-            src={state.url}
-            className="pane-webview"
-            style={
-              {
-                width: pane.width,
-                height: pane.height,
-                zoom: pane.scale,
-              } as CSSProperties
-            }
-            allowpopups={'true' as unknown as boolean}
-            webpreferences="contextIsolation=yes"
-          />
-          {!compact && pane.activeTool === 'ruler' && <RulerOverlay />}
-          {!compact && <ImageOverlayLayer pane={pane} />}
-        </div>
-      </div>
-
       {!compact && (
-        <div className="pane-footer">
-          <div className="pane-health">
-            <span className="badge error" title="Errors">
-              0
-            </span>
-            <span className="badge warn" title="Warnings">
-              0
-            </span>
-          </div>
-          <div className="pane-online">Online</div>
-        </div>
+        <PaneToolbar
+          pane={pane}
+          width={clipWidth}
+          hoverOnly={hoverOnlyTools}
+        />
       )}
+
+      <div className="pane-label-row" style={{ width: clipWidth }}>
+        <div className="pane-label-name">
+          {isFocused && (
+            <Circle
+              size={8}
+              strokeWidth={0}
+              fill="currentColor"
+              className="focus-dot"
+              aria-hidden
+            />
+          )}
+          <span>{pane.name}</span>
+        </div>
+        <div className="pane-label-size" title="Tamaño real del viewport">
+          <span>
+            {viewWidth}×{viewHeight}
+          </span>
+          <span className="px-unit">px</span>
+        </div>
+      </div>
+
+      <div className="viewport-shell" style={{ width: clipWidth }}>
+        <div className="viewport-accent" aria-hidden />
+        <div
+          className="viewport-clip"
+          style={{
+            width: clipWidth,
+            height: clipHeight,
+            overflow: 'hidden',
+          }}
+        >
+          {/* Real device box; scale lives here so the guest keeps W×H CSS px. */}
+          <div className="viewport-scale" style={scaleWrapStyle}>
+            <webview
+              ref={(node: HTMLWebViewElement | null) => {
+                const el = node as unknown as WebviewEl | null
+                webviewRef.current = el
+                if (!el) {
+                  readyRef.current = false
+                  return
+                }
+                el.setAttribute('width', String(viewWidth))
+                el.setAttribute('height', String(viewHeight))
+                el.style.width = '100%'
+                el.style.height = '100%'
+              }}
+              src={state.url}
+              className="pane-webview"
+              {...({
+                width: viewWidth,
+                height: viewHeight,
+              } as Record<string, number>)}
+              style={webviewStyle}
+              allowpopups={'true' as unknown as boolean}
+              webpreferences="contextIsolation=yes"
+            />
+            {!compact && <ImageOverlayLayer pane={pane} />}
+          </div>
+        </div>
+      </div>
     </article>
   )
 }

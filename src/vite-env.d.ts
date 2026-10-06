@@ -1,7 +1,5 @@
 /// <reference types="vite/client" />
 
-import type { CSSProperties, DetailedHTMLProps, HTMLAttributes } from 'react'
-
 interface WebviewTag extends HTMLElement {
   src: string
   partition?: string
@@ -17,6 +15,9 @@ interface WebviewTag extends HTMLElement {
   reload(): void
   stop(): void
   loadURL(url: string): Promise<void>
+  getWebContentsId(): number
+  setZoomFactor(factor: number): void
+  getZoomFactor(): number
   executeJavaScript<T = unknown>(code: string, userGesture?: boolean): Promise<T>
   insertCSS(css: string): Promise<string>
   openDevTools(): void
@@ -34,22 +35,6 @@ interface WebviewTag extends HTMLElement {
 }
 
 declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      webview: DetailedHTMLProps<
-        HTMLAttributes<WebviewTag> & {
-          src?: string
-          partition?: string
-          allowpopups?: boolean | string
-          useragent?: string
-          webpreferences?: string
-          style?: CSSProperties
-        },
-        WebviewTag
-      >
-    }
-  }
-
   interface Window {
     ipcRenderer: {
       on: (

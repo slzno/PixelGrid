@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react'
-import { X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { MoreHorizontal, RotateCw, X } from 'lucide-react'
 import {
   CameraIcon,
   CodeIcon,
@@ -16,10 +16,30 @@ import { useAppStore } from '../store/useAppStore'
 
 type PaneToolsProps = {
   pane: Pane
+  /** When true, tuck secondary tools into a "…" menu (narrow devices). */
+  compactTools?: boolean
 }
 
-export function PaneTools({ pane }: PaneToolsProps) {
+type ToolDef = {
+  id: Exclude<PaneTool, 'none'> | 'screenshot' | 'rotate' | 'close'
+  label: string
+  primary?: boolean
+}
+
+const TOOLS: ToolDef[] = [
+  { id: 'ruler', label: 'Measure', primary: true },
+  { id: 'screenshot', label: 'Screenshot', primary: true },
+  { id: 'overlay', label: 'Overlay' },
+  { id: 'eyedropper', label: 'Eyedropper' },
+  { id: 'sync', label: 'Sync', primary: true },
+  { id: 'inspect', label: 'Inspect', primary: true },
+  { id: 'rotate', label: 'Rotate' },
+  { id: 'close', label: 'Close', primary: true },
+]
+
+export function PaneTools({ pane, compactTools = false }: PaneToolsProps) {
   const fileRef = useRef<HTMLInputElement>(null)
+  const [menuOpen, setMenuOpen] = useState(false)
   const {
     state,
     togglePaneTool,
@@ -28,6 +48,7 @@ export function PaneTools({ pane }: PaneToolsProps) {
     setPaneColor,
     setPaneTool,
     removePane,
+    rotatePane,
     setStatusMessage,
     setFocusedPane,
     setSyncEnabled,
@@ -95,115 +116,126 @@ export function PaneTools({ pane }: PaneToolsProps) {
     setPaneTool(pane.id, 'none')
   }
 
+  const runTool = (id: ToolDef['id']) => {
+    setMenuOpen(false)
+    switch (id) {
+      case 'screenshot':
+        void onScreenshot()
+        break
+      case 'rotate':
+        rotatePane(pane.id)
+        break
+      case 'close':
+        removePane(pane.id)
+        break
+      case 'overlay':
+        if (pane.activeTool === 'overlay') {
+          togglePaneTool(pane.id, 'overlay')
+        } else if (!pane.overlayImage) {
+          fileRef.current?.click()
+        } else {
+          togglePaneTool(pane.id, 'overlay')
+        }
+        break
+      case 'eyedropper':
+        void onEyedropper()
+        break
+      default:
+        togglePaneTool(pane.id, id)
+    }
+  }
+
+  const visible = compactTools
+    ? TOOLS.filter((tool) => tool.primary)
+    : TOOLS
+  const overflow = compactTools
+    ? TOOLS.filter((tool) => !tool.primary)
+    : []
+
+  const renderIcon = (id: ToolDef['id']) => {
+    switch (id) {
+      case 'ruler':
+        return <RulerIcon size={15} />
+      case 'screenshot':
+        return <CameraIcon size={15} />
+      case 'overlay':
+        return <ImageIcon size={15} />
+      case 'eyedropper':
+        return <EyedropperIcon size={15} />
+      case 'sync':
+        return <PanesIcon size={15} />
+      case 'inspect':
+        return <CodeIcon size={15} />
+      case 'rotate':
+        return <RotateCw size={14} strokeWidth={1.75} />
+      case 'close':
+        return <X size={15} strokeWidth={1.75} />
+      default:
+        return null
+    }
+  }
+
   return (
     <div className="pane-tools-wrap">
-      <div className="pane-tools tools-bar" role="toolbar" aria-label="Device tools">
-        <button
-          type="button"
-          className={`tool-btn${isActive('ruler') ? ' active' : ''}`}
-          title="Measure"
-          aria-label="Measure"
-          aria-pressed={isActive('ruler')}
-          onClick={(event) => {
-            event.stopPropagation()
-            togglePaneTool(pane.id, 'ruler')
-          }}
-        >
-          <RulerIcon size={16} />
-        </button>
+      <div className="pane-tools" role="toolbar" aria-label="Device tools">
+        {visible.map((tool) => (
+          <button
+            key={tool.id}
+            type="button"
+            className={`tool-btn${
+              tool.id !== 'screenshot' &&
+              tool.id !== 'rotate' &&
+              tool.id !== 'close' &&
+              isActive(tool.id)
+                ? ' active'
+                : ''
+            }${tool.id === 'sync' && state.syncEnabled ? ' has-dot dot-on' : ''}`}
+            title={tool.label}
+            aria-label={tool.label}
+            disabled={tool.id === 'close' && state.panes.length <= 1}
+            onClick={(event) => {
+              event.stopPropagation()
+              runTool(tool.id)
+            }}
+          >
+            {renderIcon(tool.id)}
+          </button>
+        ))}
 
-        <button
-          type="button"
-          className="tool-btn"
-          title="Screenshot this device"
-          aria-label="Screenshot"
-          onClick={(event) => {
-            event.stopPropagation()
-            void onScreenshot()
-          }}
-        >
-          <CameraIcon size={16} />
-        </button>
-
-        <button
-          type="button"
-          className={`tool-btn${isActive('overlay') ? ' active' : ''}`}
-          title="Image overlay"
-          aria-label="Image overlay"
-          aria-pressed={isActive('overlay')}
-          onClick={(event) => {
-            event.stopPropagation()
-            if (pane.activeTool === 'overlay') {
-              togglePaneTool(pane.id, 'overlay')
-              return
-            }
-            if (!pane.overlayImage) {
-              fileRef.current?.click()
-              return
-            }
-            togglePaneTool(pane.id, 'overlay')
-          }}
-        >
-          <ImageIcon size={16} />
-        </button>
-
-        <button
-          type="button"
-          className={`tool-btn${isActive('eyedropper') ? ' active' : ''}`}
-          title="Color picker"
-          aria-label="Color picker"
-          aria-pressed={isActive('eyedropper')}
-          onClick={(event) => {
-            event.stopPropagation()
-            void onEyedropper()
-          }}
-        >
-          <EyedropperIcon size={16} />
-        </button>
-
-        <button
-          type="button"
-          className={`tool-btn has-dot${isActive('sync') ? ' active' : ''}${
-            state.syncEnabled ? ' dot-on' : ''
-          }`}
-          title="Sync settings"
-          aria-label="Sync settings"
-          aria-pressed={isActive('sync')}
-          onClick={(event) => {
-            event.stopPropagation()
-            togglePaneTool(pane.id, 'sync')
-          }}
-        >
-          <PanesIcon size={16} />
-        </button>
-
-        <button
-          type="button"
-          className={`tool-btn${isActive('inspect') ? ' active' : ''}`}
-          title="Inspect elements"
-          aria-label="Inspect"
-          aria-pressed={isActive('inspect')}
-          onClick={(event) => {
-            event.stopPropagation()
-            togglePaneTool(pane.id, 'inspect')
-          }}
-        >
-          <CodeIcon size={16} />
-        </button>
-
-        <button
-          type="button"
-          className="tool-btn"
-          title="Close pane"
-          aria-label="Close pane"
-          disabled={state.panes.length <= 1}
-          onClick={(event) => {
-            event.stopPropagation()
-            removePane(pane.id)
-          }}
-        >
-          <X size={15} strokeWidth={1.75} />
-        </button>
+        {overflow.length > 0 && (
+          <div className="tools-more">
+            <button
+              type="button"
+              className={`tool-btn${menuOpen ? ' active' : ''}`}
+              title="More tools"
+              aria-label="More tools"
+              onClick={(event) => {
+                event.stopPropagation()
+                setMenuOpen((open) => !open)
+              }}
+            >
+              <MoreHorizontal size={15} strokeWidth={1.75} />
+            </button>
+            {menuOpen && (
+              <div className="tools-more-menu">
+                {overflow.map((tool) => (
+                  <button
+                    key={tool.id}
+                    type="button"
+                    className="tools-more-item"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      runTool(tool.id)
+                    }}
+                  >
+                    {renderIcon(tool.id)}
+                    <span>{tool.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <input
@@ -219,15 +251,6 @@ export function PaneTools({ pane }: PaneToolsProps) {
 
       {pane.activeTool === 'overlay' && (
         <div className="tool-popover pane-tool-popover">
-          {pane.pickedColor && (
-            <div className="color-swatch-row">
-              <span
-                className="color-swatch"
-                style={{ background: pane.pickedColor }}
-              />
-              <code>{pane.pickedColor}</code>
-            </div>
-          )}
           <label>
             Opacity
             <input
@@ -289,13 +312,6 @@ export function PaneTools({ pane }: PaneToolsProps) {
             />
             Sync clicks
           </label>
-        </div>
-      )}
-
-      {pane.pickedColor && pane.activeTool !== 'overlay' && (
-        <div className="pane-color-chip" title="Last picked color">
-          <span style={{ background: pane.pickedColor }} />
-          {pane.pickedColor}
         </div>
       )}
     </div>
