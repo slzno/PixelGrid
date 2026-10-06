@@ -1,6 +1,42 @@
 import type { WebviewEl } from './webviewRegistry'
 
-/** Force Electron <webview> element box to exact CSS viewport size. */
+/**
+ * Make <webview> fill its sized parent (width/height: 100%).
+ * Electron ignores % height unless the element is explicitly stretched.
+ */
+export function applyWebviewFill(webview: WebviewEl) {
+  webview.setAttribute('width', '100%')
+  webview.setAttribute('height', '100%')
+  webview.style.cssText = [
+    'position:absolute',
+    'inset:0',
+    'top:0',
+    'left:0',
+    'right:0',
+    'bottom:0',
+    'width:100%',
+    'height:100%',
+    'min-width:100%',
+    'min-height:100%',
+    'max-width:none',
+    'max-height:none',
+    'display:flex',
+    'border:0',
+    'margin:0',
+    'padding:0',
+    'box-sizing:border-box',
+    'background:#fff',
+    'transform:none',
+  ].join(';')
+
+  try {
+    webview.setZoomFactor?.(1)
+  } catch {
+    // ignore
+  }
+}
+
+/** @deprecated Prefer applyWebviewFill + sized parent. */
 export function applyWebviewViewport(
   webview: WebviewEl,
   width: number,
@@ -11,14 +47,12 @@ export function applyWebviewViewport(
   const hPx = `${Math.max(1, Math.round(height))}px`
 
   webview.style.cssText = [
-    'display:block',
+    'display:flex',
     'position:relative',
     `width:${wPx}`,
     `height:${hPx}`,
     `min-width:${wPx}`,
     `min-height:${hPx}`,
-    `max-width:${wPx}`,
-    `max-height:${hPx}`,
     'border:0',
     'background:#fff',
     'transform-origin:0 0',

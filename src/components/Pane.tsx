@@ -16,7 +16,7 @@ import {
   safeExecuteJavaScript,
   type WebviewEl,
 } from '../lib/webviewRegistry'
-import { emulateWebviewViewport } from '../lib/webviewSize'
+import { applyWebviewFill, emulateWebviewViewport } from '../lib/webviewSize'
 import { clampZoom } from '../lib/zoom'
 import type { Pane as PaneModel } from '../store/appState'
 import { useAppStore } from '../store/useAppStore'
@@ -111,8 +111,7 @@ export function Pane({ pane, compact = false }: PaneProps) {
 
     const onDomReady = () => {
       readyRef.current = true
-      webview.style.width = '100%'
-      webview.style.height = '100%'
+      applyWebviewFill(webview)
       void emulateWebviewViewport(webview, viewWidth, viewHeight)
       installGuestTools()
       applyDark()
@@ -259,8 +258,7 @@ export function Pane({ pane, compact = false }: PaneProps) {
   useEffect(() => {
     const webview = webviewRef.current
     if (!webview) return
-    webview.style.width = '100%'
-    webview.style.height = '100%'
+    applyWebviewFill(webview)
     if (readyRef.current) {
       void emulateWebviewViewport(webview, viewWidth, viewHeight)
     }
@@ -288,16 +286,25 @@ export function Pane({ pane, compact = false }: PaneProps) {
   }, [pane.darkMode])
 
   const scaleWrapStyle: CSSProperties = {
+    position: 'relative',
     width: viewWidth,
     height: viewHeight,
+    minWidth: viewWidth,
+    minHeight: viewHeight,
     transform: `scale(${scale})`,
     transformOrigin: 'top left',
   }
 
   const webviewStyle: CSSProperties = {
+    position: 'absolute',
+    inset: 0,
+    top: 0,
+    left: 0,
     width: '100%',
     height: '100%',
-    display: 'block',
+    minWidth: '100%',
+    minHeight: '100%',
+    display: 'flex',
     border: 0,
     margin: 0,
     padding: 0,
@@ -352,7 +359,7 @@ export function Pane({ pane, compact = false }: PaneProps) {
             overflow: 'hidden',
           }}
         >
-          {/* Real device box; scale lives here so the guest keeps W×H CSS px. */}
+          {/* Parent owns real device px; webview fills with width/height 100%. */}
           <div className="viewport-scale" style={scaleWrapStyle}>
             <webview
               ref={(node: HTMLWebViewElement | null) => {
@@ -362,17 +369,14 @@ export function Pane({ pane, compact = false }: PaneProps) {
                   readyRef.current = false
                   return
                 }
-                el.setAttribute('width', String(viewWidth))
-                el.setAttribute('height', String(viewHeight))
-                el.style.width = '100%'
-                el.style.height = '100%'
+                applyWebviewFill(el)
               }}
               src={state.url}
               className="pane-webview"
               {...({
-                width: viewWidth,
-                height: viewHeight,
-              } as Record<string, number>)}
+                width: '100%',
+                height: '100%',
+              } as Record<string, string>)}
               style={webviewStyle}
               allowpopups={'true' as unknown as boolean}
               webpreferences="contextIsolation=yes"

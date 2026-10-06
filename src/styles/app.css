@@ -442,7 +442,6 @@ select {
   position: relative;
   flex: 0 0 auto;
   background: #fff;
-  line-height: 0;
   overflow: hidden;
   border-radius: 0 0 4px 4px;
 }
@@ -450,17 +449,30 @@ select {
 .viewport-scale {
   position: relative;
   display: block;
+  overflow: hidden;
   transform-origin: top left;
+  /* Explicit width/height come from inline style (device px). */
 }
 
-.viewport-scale .pane-webview {
-  display: block !important;
+/* Electron <webview> needs absolute fill — % alone often collapses to ~150px. */
+.viewport-scale .pane-webview,
+webview.pane-webview {
+  position: absolute !important;
+  inset: 0 !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
   width: 100% !important;
   height: 100% !important;
+  min-width: 100% !important;
+  min-height: 100% !important;
+  display: flex !important;
   border: 0 !important;
   margin: 0 !important;
   padding: 0 !important;
-  background: #fff;
+  background: #fff !important;
+  box-sizing: border-box !important;
 }
 
 .device-pane.thumb .pane-icon-row {
