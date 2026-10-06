@@ -436,6 +436,14 @@ select {
   background: #fff;
 }
 
+.device-pane.has-mockup .viewport-shell {
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+  border-radius: 0;
+  align-items: center;
+}
+
 .viewport-accent {
   height: 4px;
   width: 100%;
@@ -449,6 +457,119 @@ select {
   background: #fff;
   overflow: hidden;
   border-radius: 0 0 4px 4px;
+}
+
+.device-pane.has-mockup .viewport-clip {
+  border-radius: inherit;
+}
+
+/* Device mockups */
+
+.device-mockup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.device-mockup-frame {
+  position: relative;
+  box-sizing: border-box;
+  background: linear-gradient(165deg, #3a3d46 0%, #1a1c22 48%, #0e1014 100%);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset,
+    0 14px 36px rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+}
+
+.device-mockup.kind-phone .device-mockup-frame,
+.device-mockup.kind-tablet .device-mockup-frame {
+  background: linear-gradient(160deg, #2f323a 0%, #15171c 55%, #0b0c10 100%);
+}
+
+.device-mockup.kind-laptop .device-mockup-frame,
+.device-mockup.kind-desktop .device-mockup-frame {
+  background: linear-gradient(180deg, #2a2d35 0%, #17191f 100%);
+  border-radius: 10px 10px 4px 4px;
+}
+
+.device-mockup-screen {
+  position: relative;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35) inset;
+  flex: 0 0 auto;
+}
+
+.device-mockup-island,
+.device-mockup-pill,
+.device-mockup-camera {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  pointer-events: none;
+}
+
+.device-mockup-island {
+  background: #050507;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.device-mockup-pill {
+  background: #0a0b0e;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.device-mockup-camera {
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #3d4455 0%, #0c0d11 70%);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.device-mockup-laptop-base {
+  position: relative;
+  margin-top: -1px;
+  border-radius: 0 0 10px 10px;
+  background: linear-gradient(180deg, #2c2f38 0%, #1a1c22 100%);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.device-mockup-laptop-lip {
+  margin-top: 2px;
+  width: 18%;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: #0f1115;
+  opacity: 0.85;
+}
+
+.device-mockup-desktop-stand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 2px;
+}
+
+.device-mockup-desktop-neck {
+  width: 18%;
+  height: 45%;
+  background: linear-gradient(180deg, #2a2d35, #17191f);
+  border-radius: 2px;
+}
+
+.device-mockup-desktop-foot {
+  width: 100%;
+  height: 22%;
+  margin-top: auto;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #2a2d35, #12141a);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .viewport-scale {

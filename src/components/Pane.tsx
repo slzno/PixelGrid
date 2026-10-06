@@ -24,8 +24,10 @@ import {
 import { clampZoom } from '../lib/zoom'
 import type { Pane as PaneModel } from '../store/appState'
 import { useAppStore } from '../store/useAppStore'
+import { DeviceMockup } from './DeviceMockup'
 import { PaneToolbar } from './PaneToolbar'
 import { ImageOverlayLayer } from './tools/ImageOverlayLayer'
+import { getMockupSpec, mockupOuterSize } from '../lib/deviceMockup'
 
 const DARK_CSS = `
 html { color-scheme: dark !important; }
@@ -76,6 +78,10 @@ export function Pane({ pane, compact = false }: PaneProps) {
   const isInspecting = pane.activeTool === 'inspect'
   const preset = getPresetById(pane.presetId ?? '')
   const form = preset?.form ?? 'freeform'
+  const mockupSpec = getMockupSpec(form, preset?.category)
+  const mockup = mockupOuterSize(mockupSpec, clipWidth, clipHeight, scale)
+  const chromeWidth =
+    mockupSpec.kind === 'none' ? clipWidth : mockup.outerW
 
   useEffect(() => {
     setPaneSizeLock(pane.id, viewWidth, viewHeight)
@@ -367,17 +373,54 @@ export function Pane({ pane, compact = false }: PaneProps) {
     background: '#fff',
   }
 
+  const viewport = (
+    <div
+      className="viewport-clip"
+      style={{
+        width: clipWidth,
+        height: clipHeight,
+        overflow: 'hidden',
+      }}
+    >
+      <div className="viewport-scale" style={scaleWrapStyle}>
+        <webview
+          ref={(node: HTMLWebViewElement | null) => {
+            const el = node as unknown as WebviewEl | null
+            webviewRef.current = el
+            if (!el) {
+              readyRef.current = false
+              return
+            }
+            lockWebviewSize(el, viewWidth, viewHeight)
+          }}
+          src={state.url}
+          className="pane-webview"
+          {...({
+            width: viewWidth,
+            height: viewHeight,
+          } as Record<string, number>)}
+          style={webviewStyle}
+          allowpopups={'true' as unknown as boolean}
+          webpreferences="contextIsolation=yes"
+        />
+        {!compact && <ImageOverlayLayer pane={pane} />}
+      </div>
+    </div>
+  )
+
   return (
     <article
       className={`device-pane form-${form}${compact ? ' thumb' : ''}${
         isFocused ? ' focused' : ''
-      }${isInspecting ? ' inspecting' : ''}`}
-      style={{ width: clipWidth }}
+      }${isInspecting ? ' inspecting' : ''}${
+        mockupSpec.kind !== 'none' ? ' has-mockup' : ''
+      }`}
+      style={{ width: chromeWidth }}
       onClick={() => setFocusedPane(pane.id)}
     >
-      {!compact && <PaneToolbar pane={pane} width={clipWidth} />}
+      {!compact && <PaneToolbar pane={pane} width={chromeWidth} />}
 
-      <div className="pane-label-row" style={{ width: clipWidth }}>
+      <div className="pane-label-row" style={{ width: chromeWidth }}>
         <div className="pane-label-name">
           {isFocused && (
             <Circle
@@ -398,41 +441,27 @@ export function Pane({ pane, compact = false }: PaneProps) {
         </div>
       </div>
 
-      <div className="viewport-shell" style={{ width: clipWidth }}>
-        <div className="viewport-accent" aria-hidden />
-        <div
-          className="viewport-clip"
-          style={{
-            width: clipWidth,
-            height: clipHeight,
-            overflow: 'hidden',
-          }}
-        >
-          {/* Parent owns real device px; webview fills with width/height 100%. */}
-          <div className="viewport-scale" style={scaleWrapStyle}>
-            <webview
-              ref={(node: HTMLWebViewElement | null) => {
-                const el = node as unknown as WebviewEl | null
-                webviewRef.current = el
-                if (!el) {
-                  readyRef.current = false
-                  return
-                }
-                lockWebviewSize(el, viewWidth, viewHeight)
-              }}
-              src={state.url}
-              className="pane-webview"
-              {...({
-                width: viewWidth,
-                height: viewHeight,
-              } as Record<string, number>)}
-              style={webviewStyle}
-              allowpopups={'true' as unknown as boolean}
-              webpreferences="contextIsolation=yes"
-            />
-            {!compact && <ImageOverlayLayer pane={pane} />}
-          </div>
-        </div>
+      <div className="viewport-shell" style={{ width: chromeWidth }}>
+        {mockupSpec.kind === 'none' && (
+          <div className="viewport-accent" aria-hidden />
+        )}
+        {mockupSpec.kind === 'none' ? (
+          viewport
+        ) : (
+          <DeviceMockup
+            spec={mockupSpec}
+            scale={scale}
+            screenW={clipWidth}
+            screenH={clipHeight}
+            outerW={mockup.outerW}
+            frameW={mockup.frameW}
+            frameH={mockup.frameH}
+            baseW={mockup.baseW}
+            baseH={mockup.baseH}
+          >
+            {viewport}
+          </DeviceMockup>
+        )}
       </div>
     </article>
   )
